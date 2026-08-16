@@ -36,7 +36,8 @@ function Register() {
       navigate('/')
       toast.success('Registered successfully!')
     } catch (error) {
-      toast.error('Registration failed')
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Registration failed'
+      toast.error(msg)
     }
   }
 

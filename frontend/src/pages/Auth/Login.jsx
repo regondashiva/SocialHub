@@ -29,7 +29,8 @@ function Login() {
       navigate('/')
       toast.success('Logged in successfully!')
     } catch (error) {
-      toast.error('Login failed')
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Login failed. Check credentials.'
+      toast.error(msg)
     }
   }
 
