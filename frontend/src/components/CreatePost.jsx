@@ -1,61 +1,103 @@
-import React, { useState, useRef } from 'react'
-import { ImagePlus, X, MapPin, Smile, Hash, UserPlus, Video, Music, Sparkles } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { 
+  ImagePlus, X, MapPin, Smile, Hash, Video, Film, Sparkles, 
+  ArrowLeft, Check, AlertTriangle, Globe, Play, Trash2, UploadCloud
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePostStore } from '../store/postStore'
+import { useAuthStore } from '../store/authStore'
 import { toxicityService } from '../services/toxicityService'
 import toast from 'react-hot-toast'
 
 function CreatePost({ isOpen, onClose, onPostCreated }) {
+  const { user } = useAuthStore()
+  const { createPost } = usePostStore()
+
   const [caption, setCaption] = useState('')
-  const [image, setImage] = useState(null)
-  const [video, setVideo] = useState(null)
+  const [mediaType, setMediaType] = useState('image') // 'image' | 'video' | 'reel'
+  const [mediaFile, setMediaFile] = useState(null)
   const [preview, setPreview] = useState(null)
-  const [mediaType, setMediaType] = useState('image') // 'image', 'video', 'reel'
   const [loading, setLoading] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [location, setLocation] = useState('')
   const [feeling, setFeeling] = useState('')
   const [duration, setDuration] = useState('')
+  const [showLocationInput, setShowLocationInput] = useState(false)
+  const [showFeelingPicker, setShowFeelingPicker] = useState(false)
+  const [toxicityAlert, setToxicityAlert] = useState(null)
+  const [suggestedRewrite, setSuggestedRewrite] = useState(null)
+
   const fileInputRef = useRef(null)
-  const { createPost } = usePostStore()
+
+  // Real-time toxicity check as user types caption
+  useEffect(() => {
+    if (!caption.trim()) {
+      setToxicityAlert(null)
+      setSuggestedRewrite(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      const result = await toxicityService.detectToxicity(caption)
+      if (result.is_toxic || result.toxicity_score >= 0.5) {
+        setToxicityAlert({
+          score: result.toxicity_score,
+          level: result.toxicity_score >= 0.75 ? 'BLOCKED' : 'WARNING'
+        })
+        const rewrite = await toxicityService.suggestRewrite(caption)
+        if (rewrite) setSuggestedRewrite(rewrite)
+      } else {
+        setToxicityAlert(null)
+        setSuggestedRewrite(null)
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [caption])
+
+  if (!isOpen) return null
 
   const handleMediaChange = (e) => {
     const file = e.target.files[0]
-    if (file) {
-      const maxSize = mediaType === 'video' || mediaType === 'reel' ? 100 * 1024 * 1024 : 10 * 1024 * 1024
-      if (file.size > maxSize) {
-        const sizeLimit = mediaType === 'video' || mediaType === 'reel' ? '100MB' : '10MB'
-        toast.error(`${mediaType === 'image' ? 'Image' : 'Video'} size should be less than ${sizeLimit}`)
-        return
-      }
-      
-      if (mediaType === 'image') {
-        setImage(file)
-        setVideo(null)
-        const reader = new FileReader()
-        reader.onloadend = () => setPreview(reader.result)
-        reader.readAsDataURL(file)
-      } else {
-        setVideo(file)
-        setImage(null)
-        const reader = new FileReader()
-        reader.onloadend = () => setPreview(reader.result)
-        reader.readAsDataURL(file)
-        
-        const videoElement = document.createElement('video')
-        videoElement.src = URL.createObjectURL(file)
-        videoElement.onloadedmetadata = () => {
-          setDuration(Math.floor(videoElement.duration))
-          URL.revokeObjectURL(videoElement.src)
-        }
+    if (!file) return
+
+    const isVideo = file.type.startsWith('video')
+    const maxSize = isVideo ? 100 * 1024 * 1024 : 15 * 1024 * 1024
+
+    if (file.size > maxSize) {
+      toast.error(`File size exceeds limit (${isVideo ? '100MB' : '15MB'})`)
+      return
+    }
+
+    setMediaFile(file)
+    setMediaType(isVideo ? 'video' : 'image')
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+
+    if (isVideo) {
+      const videoElement = document.createElement('video')
+      videoElement.src = URL.createObjectURL(file)
+      videoElement.onloadedmetadata = () => {
+        setDuration(Math.floor(videoElement.duration))
+        URL.revokeObjectURL(videoElement.src)
       }
     }
   }
 
+  const handleRemoveMedia = () => {
+    setMediaFile(null)
+    setPreview(null)
+    setDuration('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleSubmit = async () => {
     if (loading) return
-    if (!caption.trim() && !image && !video && !preview) {
-      toast.error('Add a caption or media')
+    if (!caption.trim() && !preview) {
+      toast.error('Please add a caption or upload media')
       return
     }
 
@@ -69,11 +111,12 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
 
     setLoading(true)
     try {
+      const isVideo = mediaType === 'video' || mediaType === 'reel' || (mediaFile && mediaFile.type.startsWith('video'))
       const postData = {
         caption: caption.trim(),
-        mediaType,
-        image: mediaType === 'image' ? preview : null,
-        video: (mediaType === 'video' || mediaType === 'reel') ? preview : null,
+        mediaType: isVideo ? (mediaType === 'reel' ? 'reel' : 'video') : 'image',
+        image: !isVideo ? preview : null,
+        video: isVideo ? preview : null,
         duration: duration || null,
         location: location.trim() || null,
         feeling: feeling.trim() || null,
@@ -81,211 +124,324 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
       }
 
       await createPost(postData)
+
+      // Reset
       setCaption('')
-      setImage(null)
-      setVideo(null)
+      setMediaFile(null)
       setPreview(null)
-      setDuration('')
       setLocation('')
       setFeeling('')
+      setDuration('')
       if (onPostCreated) onPostCreated(postData)
       if (onClose) onClose()
-      toast.success('Post created successfully!')
+      toast.success('Post published successfully! 🎉')
     } catch (error) {
-      toast.error('Failed to create post')
-      console.error('Error creating post:', error)
+      const msg = error.response?.data?.message || 'Failed to create post'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
   }
 
   const feelings = [
-    '😊 Happy', '🎉 Excited', '🤔 Thinking', '😎 Chill', 
-    '🚀 Building', '💡 Inspired', '🔥 On Fire'
+    '😊 Happy', '🔥 Excited', '🌴 Chill', '🚀 Building', 
+    '💡 Inspired', '🎧 Vibing', '☕ Relaxed', '🎉 Celebrating'
   ]
 
-  const content = (
-    <div className="glass-card border border-white/10 p-5 rounded-2xl shadow-2xl relative">
-      {onClose && (
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      )}
+  const isVideoMedia = mediaType === 'video' || mediaType === 'reel' || (mediaFile && mediaFile.type.startsWith('video'))
 
-      {/* Header */}
-      <div className="flex items-start space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-cyan flex items-center justify-center shadow-glow-violet flex-shrink-0">
-          <Sparkles className="w-5 h-5 text-white animate-pulse" />
-        </div>
-        <div className="flex-1">
-          <textarea
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            placeholder="Share your thought or spark a idea..."
-            className="w-full bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none text-base font-normal pt-1"
-            rows="2"
-          />
-        </div>
-      </div>
-
-      {/* Preview */}
-      <AnimatePresence>
-        {preview && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="relative mb-4 rounded-xl overflow-hidden border border-white/10"
-          >
-            <img src={preview} alt="preview" className="w-full max-h-[300px] object-contain bg-obsidian" />
+  return (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="w-full max-w-2xl bg-[#181818] border border-[#2c2c2c] rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]"
+      >
+        {/* Modal Header */}
+        <div className="h-14 px-4 border-b border-[#2c2c2c] flex items-center justify-between bg-[#121212] flex-shrink-0">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                setImage(null)
-                setPreview(null)
-              }}
-              className="absolute top-2 right-2 bg-obsidian-card backdrop-blur-md p-2 rounded-full text-white hover:bg-red-500/20 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Media Type Tabs */}
-      <div className="flex space-x-2 mb-4">
-        {[
-          { type: 'image', label: 'Photo', icon: ImagePlus },
-          { type: 'video', label: 'Video', icon: Video },
-          { type: 'reel', label: 'Reel', icon: Music },
-        ].map(({ type, label, icon: Icon }) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setMediaType(type)}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
-              mediaType === type
-                ? 'bg-accent/20 border border-accent/50 text-accent shadow-glow-violet'
-                : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white'
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Media Drop Zone */}
-      {!preview && (
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-white/10 rounded-xl p-5 mb-4 text-center hover:border-accent/50 hover:bg-white/[0.02] transition-all duration-200 cursor-pointer group"
-        >
-          <div className="flex flex-col items-center space-y-2">
-            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ImagePlus className="w-6 h-6 text-accent" />
-            </div>
-            <p className="text-xs text-gray-300 font-semibold">
-              Click or drag to upload {mediaType}
-            </p>
-            <p className="text-[10px] text-gray-500">Max size 100MB</p>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center justify-between border-t border-white/10 pt-3">
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-xs font-semibold text-gray-400 hover:text-cyan flex items-center space-x-1 transition"
-        >
-          <Hash className="w-4 h-4" />
-          <span>{showAdvanced ? 'Less Options' : 'Location & Feeling'}</span>
-        </button>
-
-        <div className="flex items-center space-x-3">
-          {onClose && (
-            <button
-              type="button"
               onClick={onClose}
-              className="text-xs font-semibold text-gray-400 hover:text-white transition"
+              className="p-1.5 text-gray-400 hover:text-white rounded-full hover:bg-white/5 transition"
+              title="Close"
             >
-              Cancel
+              <X className="w-5 h-5" />
             </button>
-          )}
-          <motion.button
-            whileTap={{ scale: 0.96 }}
+            <span className="font-semibold text-sm sm:text-base text-white">Create new post</span>
+          </div>
+
+          <button
             onClick={handleSubmit}
-            disabled={loading || (!caption.trim() && !image && !video && !preview)}
-            className="bg-neon-gradient text-white px-5 py-2 rounded-xl text-xs font-bold shadow-glow-violet hover:shadow-glow-cyan transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={loading || (!caption.trim() && !preview) || toxicityAlert?.level === 'BLOCKED'}
+            className="px-4 py-1.5 bg-[#0095F6] hover:bg-[#1877F2] disabled:opacity-40 disabled:hover:bg-[#0095F6] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm"
           >
-            {loading ? 'Publishing...' : 'Share Post'}
-          </motion.button>
+            {loading ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Sharing...</span>
+              </span>
+            ) : (
+              'Share'
+            )}
+          </button>
         </div>
-      </div>
 
-      {/* Advanced Options */}
-      <AnimatePresence>
-        {showAdvanced && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-3 pt-3 border-t border-white/5 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Add location tag..."
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Smile className="w-4 h-4 text-gray-400" />
-              <select
-                value={feeling}
-                onChange={(e) => setFeeling(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-accent"
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-12 min-h-[360px]">
+          
+          {/* Media Upload / Preview Canvas (7 cols on desktop) */}
+          <div className="md:col-span-7 bg-black flex flex-col items-center justify-center p-4 border-b md:border-b-0 md:border-r border-[#2c2c2c] min-h-[260px] relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleMediaChange}
+              className="hidden"
+            />
+
+            {preview ? (
+              <div className="relative w-full h-full min-h-[280px] max-h-[400px] flex items-center justify-center rounded-xl overflow-hidden bg-[#0a0a0a]">
+                {isVideoMedia ? (
+                  <video
+                    src={preview}
+                    className="w-full h-full max-h-[380px] object-contain rounded-lg"
+                    controls
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={preview}
+                    alt="Uploaded preview"
+                    className="w-full h-full max-h-[380px] object-contain rounded-lg"
+                  />
+                )}
+
+                {/* Remove Media Button */}
+                <button
+                  onClick={handleRemoveMedia}
+                  className="absolute top-2.5 right-2.5 p-2 bg-black/70 hover:bg-red-600 text-white rounded-full transition backdrop-blur-sm"
+                  title="Remove media"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                {/* Media Type Badge */}
+                <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-md text-[11px] font-mono text-white/80 border border-white/10 flex items-center gap-1">
+                  {isVideoMedia ? <Film className="w-3 h-3 text-cyan-400" /> : <ImagePlus className="w-3 h-3 text-green-400" />}
+                  <span>{isVideoMedia ? (mediaType === 'reel' ? 'Reel Video' : 'Video') : 'Photo'}</span>
+                </div>
+              </div>
+            ) : (
+              /* Dropzone Placeholder */
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full h-full min-h-[260px] border-2 border-dashed border-[#363636] hover:border-[#0095F6] rounded-xl flex flex-col items-center justify-center p-6 text-center cursor-pointer transition group bg-[#121212]/50 hover:bg-[#121212]"
               >
-                <option value="" className="bg-obsidian">Select current mood...</option>
-                {feelings.map((f) => (
-                  <option key={f} value={f} className="bg-obsidian">{f}</option>
-                ))}
-              </select>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <div className="w-16 h-16 rounded-full bg-[#262626] group-hover:bg-[#0095F6]/10 flex items-center justify-center text-gray-400 group-hover:text-[#0095F6] transition mb-3">
+                  <UploadCloud className="w-8 h-8 stroke-[1.5]" />
+                </div>
+                <h4 className="text-white font-semibold text-sm mb-1">Drag photos and videos here</h4>
+                <p className="text-gray-400 text-xs mb-4">Supports JPG, PNG, MP4, WebM (up to 100MB)</p>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-[#0095F6] hover:bg-[#1877F2] text-white text-xs font-bold rounded-lg transition shadow-md"
+                >
+                  Select from device
+                </button>
+              </div>
+            )}
+          </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={mediaType === 'image' ? 'image/*' : 'video/*'}
-        onChange={handleMediaChange}
-        className="hidden"
-      />
+          {/* Details & Caption Section (5 cols on desktop) */}
+          <div className="md:col-span-5 p-4 flex flex-col justify-between space-y-4 bg-[#161616]">
+            
+            <div className="space-y-3.5">
+              {/* User Header */}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#262626] overflow-hidden flex items-center justify-center p-[1px] bg-gradient-to-tr from-yellow-400 to-purple-600 flex-shrink-0">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.username} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="font-bold text-xs text-white">{user?.username?.charAt(0)?.toUpperCase() || 'U'}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <span className="font-bold text-xs text-white block truncate">@{user?.username || 'user'}</span>
+                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                    <Globe className="w-3 h-3 text-[#0095F6]" />
+                    <span>Public</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Caption Textarea */}
+              <div className="relative">
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Write a caption..."
+                  rows={4}
+                  className="w-full bg-[#121212] border border-[#2a2a2a] focus:border-[#3a3a3a] rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none resize-none leading-relaxed"
+                />
+                
+                {/* Emoji Bar */}
+                <div className="flex items-center justify-between text-gray-400 pt-1 px-1">
+                  <div className="flex items-center gap-1.5">
+                    {['🔥', '❤️', '✨', '🚀', '🙌'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setCaption(prev => prev + emoji)}
+                        className="text-xs hover:scale-125 transition"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-gray-500">{caption.length}/2,200</span>
+                </div>
+              </div>
+
+              {/* AI Toxicity Alert & Suggestion Banner */}
+              <AnimatePresence>
+                {(toxicityAlert || suggestedRewrite) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-2.5 rounded-xl bg-red-950/60 border border-red-800/80 text-white space-y-1.5 text-xs"
+                  >
+                    <div className="flex items-center gap-1.5 text-red-300 font-semibold text-[11px]">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                      <span>Warning: Contains offensive words</span>
+                    </div>
+
+                    {suggestedRewrite && (
+                      <div className="bg-black/50 p-2 rounded-lg space-y-1.5 border border-white/5">
+                        <span className="text-[10px] text-cyan-400 font-bold block">💡 Suggested Polite Version:</span>
+                        <p className="text-[11px] italic text-gray-200">"{suggestedRewrite}"</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCaption(suggestedRewrite)
+                            setToxicityAlert(null)
+                            setSuggestedRewrite(null)
+                          }}
+                          className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold rounded transition flex items-center gap-1"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>Use Suggestion</span>
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Location Input */}
+              {showLocationInput ? (
+                <div className="flex items-center gap-2 bg-[#121212] border border-[#2a2a2a] rounded-lg px-2.5 py-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Add location (e.g. Paris, France)"
+                    className="flex-1 bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
+                  />
+                  <button onClick={() => setShowLocationInput(false)} className="text-gray-500 hover:text-white">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowLocationInput(true)}
+                  className="w-full py-2 px-3 bg-[#121212] hover:bg-[#1f1f1f] border border-[#262626] rounded-xl text-xs text-gray-300 flex items-center justify-between transition"
+                >
+                  <span className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-red-400" />
+                    <span>{location || 'Add Location'}</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500">{location ? 'Edit' : '+'}</span>
+                </button>
+              )}
+
+              {/* Feeling Picker */}
+              {showFeelingPicker ? (
+                <div className="bg-[#121212] border border-[#2a2a2a] rounded-xl p-2.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-300">
+                    <span>Select feeling:</span>
+                    <button onClick={() => setShowFeelingPicker(false)} className="text-gray-500 hover:text-white">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {feelings.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => {
+                          setFeeling(f)
+                          setShowFeelingPicker(false)
+                        }}
+                        className={`text-[11px] p-1.5 rounded-lg border transition text-left ${
+                          feeling === f ? 'bg-[#0095F6]/20 border-[#0095F6] text-white' : 'bg-[#181818] border-[#2a2a2a] text-gray-300 hover:bg-[#222]'
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowFeelingPicker(true)}
+                  className="w-full py-2 px-3 bg-[#121212] hover:bg-[#1f1f1f] border border-[#262626] rounded-xl text-xs text-gray-300 flex items-center justify-between transition"
+                >
+                  <span className="flex items-center gap-2">
+                    <Smile className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>{feeling || 'Add Feeling / Activity'}</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500">{feeling ? 'Edit' : '+'}</span>
+                </button>
+              )}
+
+            </div>
+
+            {/* Media Type Selector */}
+            <div className="pt-2 border-t border-[#262626] flex items-center justify-between">
+              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Format</span>
+              <div className="flex items-center gap-1.5 bg-[#121212] p-1 rounded-lg border border-[#262626]">
+                <button
+                  type="button"
+                  onClick={() => setMediaType('image')}
+                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                    mediaType === 'image' ? 'bg-[#0095F6] text-white' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Post
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType('reel')}
+                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                    mediaType === 'reel' ? 'bg-[#0095F6] text-white' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Reel
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </motion.div>
     </div>
   )
-
-  if (isOpen !== undefined) {
-    if (!isOpen) return null
-    return (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-lg">
-          {content}
-        </motion.div>
-      </div>
-    )
-  }
-
-  return content
 }
 
 export default CreatePost
-
