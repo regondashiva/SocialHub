@@ -7,7 +7,7 @@ import axios from 'axios'
 import { API_URL } from '../config/api'
 import { useAuthStore } from '../store/authStore'
 
-function CommentSection({ postId, showComments }) {
+function CommentSection({ postId, showComments, onCommentAdded }) {
   const { user: currentUser } = useAuthStore()
   const [comment, setComment] = useState('')
   const [toxicityAlert, setToxicityAlert] = useState(null)
@@ -79,6 +79,7 @@ function CommentSection({ postId, showComments }) {
       })
 
       setComments(prev => [...prev, response.data])
+      if (onCommentAdded) onCommentAdded(response.data)
       setComment('')
       setToxicityAlert(null)
       setSuggestion(null)
@@ -108,6 +109,7 @@ function CommentSection({ postId, showComments }) {
       })
 
       setComments(prev => [...prev, response.data])
+      if (onCommentAdded) onCommentAdded(response.data)
       toast.success('Posted respectful suggestion ✨')
     } catch (error) {
       toast.error('Failed to post comment')

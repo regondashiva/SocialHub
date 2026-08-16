@@ -235,14 +235,16 @@ function ReelsSection({ onBackToHome }) {
 
   return (
     <div 
-      className="min-h-screen bg-black flex items-center justify-center pt-2 pb-16 md:py-4 select-none touch-none"
+      className="min-h-screen bg-black flex items-center justify-center pt-2 pb-16 md:py-4"
       onWheel={handleWheel}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* 9:16 Reel Stage */}
-      <div className="relative w-full max-w-[420px] h-[86vh] md:h-[90vh] bg-[#121212] rounded-2xl overflow-hidden shadow-2xl border border-[#262626] flex items-center justify-center">
+      <div 
+        className="relative w-full max-w-[420px] h-[86vh] md:h-[90vh] bg-[#121212] rounded-2xl overflow-hidden shadow-2xl border border-[#262626] flex items-center justify-center"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
 
         {currentReel && (
           <>
@@ -432,7 +434,12 @@ function ReelsSection({ onBackToHome }) {
       {/* Reel Comments Bottom Sheet Modal */}
       <AnimatePresence>
         {showComments && currentReel && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -447,7 +454,13 @@ function ReelsSection({ onBackToHome }) {
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                <CommentSection postId={currentReel.id} showComments={true} />
+                <CommentSection 
+                  postId={currentReel.id} 
+                  showComments={true} 
+                  onCommentAdded={() => {
+                    setReels(prev => prev.map((r, i) => i === currentIndex ? { ...r, commentsCount: (r.commentsCount || 0) + 1 } : r))
+                  }}
+                />
               </div>
             </motion.div>
           </div>

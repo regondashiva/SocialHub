@@ -247,6 +247,10 @@ router.post('/:postId/unlike', authMiddleware, async (req, res) => {
 // GET comments for a post
 router.get('/:postId/comments', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.postId)) {
+      return res.json([])
+    }
+
     const post = await Post.findById(req.params.postId)
       .populate('comments.author', 'username avatar fullName')
       .select('comments')
@@ -278,6 +282,24 @@ router.post('/:postId/comments', authMiddleware, async (req, res) => {
         isBlocked: true,
         detectedWords: toxicCheck.matched
       })
+    }
+
+    const user = await User.findById(req.userId)
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.postId)) {
+      const mockComment = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        author: {
+          _id: user?._id || req.userId,
+          username: user?.username || 'You',
+          avatar: user?.avatar || '',
+          fullName: user?.fullName || 'You'
+        },
+        text: text.trim(),
+        toxicityScore: score,
+        createdAt: new Date()
+      }
+      return res.status(201).json(mockComment)
     }
 
     const post = await Post.findById(req.params.postId)
