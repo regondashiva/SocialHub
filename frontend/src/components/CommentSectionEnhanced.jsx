@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, Sparkles, Send, Trash2, Heart, Smile, Check, X } from 'lucide-react'
+import { AlertTriangle, Sparkles, Send, Trash2, Heart, Smile, Check, X, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toxicityService } from '../services/toxicityService'
 import toast from 'react-hot-toast'
@@ -41,19 +41,18 @@ function CommentSection({ postId, showComments }) {
 
     const timer = setTimeout(async () => {
       const result = await toxicityService.detectToxicity(comment)
-      if (result.toxicity_score >= 0.75) {
-        setToxicityAlert({ level: 'BLOCKED', score: result.toxicity_score })
-        const rewrite = await toxicityService.suggestRewrite(comment)
-        if (rewrite) setSuggestion(rewrite)
-      } else if (result.toxicity_score > 0.5) {
-        setToxicityAlert({ level: 'WARNING', score: result.toxicity_score })
+      if (result.toxicity_score >= 0.5 || result.is_toxic) {
+        setToxicityAlert({ 
+          level: result.toxicity_score >= 0.75 ? 'BLOCKED' : 'WARNING', 
+          score: result.toxicity_score 
+        })
         const rewrite = await toxicityService.suggestRewrite(comment)
         if (rewrite) setSuggestion(rewrite)
       } else {
         setToxicityAlert(null)
         setSuggestion(null)
       }
-    }, 350)
+    }, 300)
 
     return () => clearTimeout(timer)
   }, [comment])
@@ -64,7 +63,10 @@ function CommentSection({ postId, showComments }) {
 
     const toxicResult = await toxicityService.detectToxicity(comment)
     if (toxicResult.is_toxic || toxicResult.toxicity_score >= 0.5) {
-      toast.error('🚫 Comment blocked: Contains inappropriate or abusive words. Please rewrite.')
+      toast.error('🚫 Comment blocked: Contains inappropriate words. Please use the suggested rewrite below!')
+      const rewrite = await toxicityService.suggestRewrite(comment)
+      if (rewrite) setSuggestion(rewrite)
+      setToxicityAlert({ level: 'BLOCKED', score: toxicResult.toxicity_score })
       return
     }
 
@@ -89,6 +91,31 @@ function CommentSection({ postId, showComments }) {
     }
   }
 
+  // 1-Tap Apply & Instant Post the civil suggestion
+  const handleApplyAndPost = async () => {
+    if (!suggestion) return
+    const textToPost = suggestion
+    setComment('')
+    setToxicityAlert(null)
+    setSuggestion(null)
+    setLoading(true)
+
+    try {
+      const response = await axios.post(`${API_URL}/posts/${postId}/comments`, {
+        text: textToPost,
+        toxicityScore: 0,
+        toxicityCategories: {}
+      })
+
+      setComments(prev => [...prev, response.data])
+      toast.success('Posted respectful suggestion ✨')
+    } catch (error) {
+      toast.error('Failed to post comment')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDeleteComment = async (commentId) => {
     try {
       await axios.delete(`${API_URL}/posts/${postId}/comments/${commentId}`)
@@ -101,15 +128,6 @@ function CommentSection({ postId, showComments }) {
 
   const toggleCommentLike = (commentId) => {
     setLikedComments(prev => ({ ...prev, [commentId]: !prev[commentId] }))
-  }
-
-  const applyRewrite = () => {
-    if (suggestion) {
-      setComment(suggestion)
-      setToxicityAlert(null)
-      setSuggestion(null)
-      toast.success('Applied civil rewrite ✨')
-    }
   }
 
   const formatCommentTime = (date) => {
@@ -191,45 +209,55 @@ function CommentSection({ postId, showComments }) {
         )}
       </div>
 
-      {/* Real-time Toxicity Inline Alert */}
+      {/* Real-time Toxicity & AI Smart Suggestion Banner */}
       <AnimatePresence>
-        {toxicityAlert && (
+        {(toxicityAlert || suggestion) && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className={`px-4 py-2 text-xs border-t ${
-              toxicityAlert.level === 'BLOCKED'
-                ? 'bg-red-950/70 border-red-800 text-red-200'
-                : 'bg-yellow-950/70 border-yellow-800 text-yellow-200'
-            }`}
+            className="px-4 py-2.5 text-xs border-t bg-gradient-to-r from-red-950/80 via-[#181818] to-purple-950/80 border-red-800 text-white space-y-2"
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">
-                  {toxicityAlert.level === 'BLOCKED'
-                    ? 'Comment violates safety guidelines (Blocked)'
-                    : 'Tone warning: language may be offensive'}
-                </span>
+              <div className="flex items-center gap-1.5 min-w-0 text-red-300 font-semibold">
+                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <span>Toxic words detected! We encourage respectful communication.</span>
               </div>
-              <span className="text-[10px] opacity-75 font-mono">
-                Risk: {Math.round(toxicityAlert.score * 100)}%
-              </span>
             </div>
 
             {suggestion && (
-              <div className="mt-1.5 flex items-center justify-between gap-2 bg-black/40 p-1.5 rounded-lg">
-                <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-white">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                  <span className="truncate italic">"{suggestion}"</span>
+              <div className="bg-black/60 border border-white/10 p-2.5 rounded-xl space-y-2">
+                <div className="flex items-start gap-2 text-xs text-white">
+                  <Sparkles className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] text-cyan-400 font-bold uppercase block tracking-wider">AI Suggested Polite Rewrite:</span>
+                    <span className="italic text-gray-200">"{suggestion}"</span>
+                  </div>
                 </div>
-                <button
-                  onClick={applyRewrite}
-                  className="px-2 py-0.5 bg-[#0095F6] hover:bg-[#1877F2] text-white text-[10px] font-bold rounded flex-shrink-0 transition"
-                >
-                  Apply
-                </button>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleApplyAndPost}
+                    disabled={loading}
+                    className="flex-1 py-1.5 px-3 bg-gradient-to-r from-[#0095F6] to-purple-600 hover:opacity-90 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-md"
+                  >
+                    <span>Post Suggested Rewrite</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setComment(suggestion)
+                      setToxicityAlert(null)
+                      setSuggestion(null)
+                    }}
+                    className="py-1.5 px-3 bg-[#262626] hover:bg-[#363636] text-gray-200 text-xs font-semibold rounded-lg transition"
+                  >
+                    Insert to Edit
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>
