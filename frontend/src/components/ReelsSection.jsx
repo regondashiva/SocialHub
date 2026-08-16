@@ -94,17 +94,27 @@ function ReelsSection({ onBackToHome }) {
     }
   }
 
+  const { posts, fetchPosts, likePost, unlikePost } = usePostStore()
+
   const handleDoubleTap = () => {
     if (currentReel) {
       setLikedReels(prev => ({ ...prev, [currentReel.id]: true }))
       setDoubleTapLiked(true)
+      if (currentReel.id && !currentReel.id.startsWith('mock')) {
+        likePost(currentReel.id)
+      }
       setTimeout(() => setDoubleTapLiked(false), 800)
     }
   }
 
   const toggleLike = () => {
     if (currentReel) {
-      setLikedReels(prev => ({ ...prev, [currentReel.id]: !prev[currentReel.id] }))
+      const willLike = !likedReels[currentReel.id]
+      setLikedReels(prev => ({ ...prev, [currentReel.id]: willLike }))
+      if (currentReel.id && !currentReel.id.startsWith('mock')) {
+        if (willLike) likePost(currentReel.id)
+        else unlikePost(currentReel.id)
+      }
     }
   }
 
