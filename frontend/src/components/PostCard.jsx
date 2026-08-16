@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Smile, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import axios from 'axios'
 import CommentSection from './CommentSectionEnhanced'
 import { usePostStore } from '../store/postStore'
 import { toxicityService } from '../services/toxicityService'
+import { API_URL } from '../config/api'
 import toast from 'react-hot-toast'
 
 const workingVideos = [
@@ -86,6 +88,19 @@ function PostCard({ post }) {
       setLiked(true)
       setLikes(prev => prev + 1)
       await likePost(post.id || post._id)
+    }
+  }
+
+  const handleSaveToggle = async () => {
+    const targetId = post.id || post._id
+    if (!targetId) return
+    const nextSaved = !saved
+    setSaved(nextSaved)
+    try {
+      await axios.post(`${API_URL}/users/saved/${targetId}`)
+      toast.success(nextSaved ? 'Saved to profile' : 'Removed from saved')
+    } catch (err) {
+      setSaved(!nextSaved)
     }
   }
 
@@ -207,7 +222,7 @@ function PostCard({ post }) {
               <Send className="w-6 h-6 text-white" />
             </button>
           </div>
-          <button onClick={() => setSaved(!saved)} className="hover:opacity-60 transition">
+          <button onClick={handleSaveToggle} className="hover:opacity-60 transition">
             <Bookmark className={`w-6 h-6 ${saved ? 'text-white fill-white' : 'text-white'}`} />
           </button>
         </div>

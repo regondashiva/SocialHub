@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { Loader, Search, UserPlus, Check, Sparkles } from 'lucide-react'
 import { API_URL } from '../config/api'
+import { useAuthStore } from '../store/authStore'
+import toast from 'react-hot-toast'
 
 function Explore() {
   const [users, setUsers] = useState([])
@@ -34,10 +36,24 @@ function Explore() {
     )
   }, [users, search])
 
-  const toggleFollow = (userId, e) => {
+  const { user: currentUser } = useAuthStore()
+
+  const toggleFollow = async (userId, e) => {
     e.preventDefault()
     e.stopPropagation()
-    setFollowingMap(prev => ({ ...prev, [userId]: !prev[userId] }))
+    const currentlyFollowing = !!followingMap[userId]
+    setFollowingMap(prev => ({ ...prev, [userId]: !currentlyFollowing }))
+    try {
+      if (currentlyFollowing) {
+        await axios.post(`${API_URL}/users/${userId}/unfollow`)
+        toast.success('Unfollowed')
+      } else {
+        await axios.post(`${API_URL}/users/${userId}/follow`)
+        toast.success('Following')
+      }
+    } catch (err) {
+      setFollowingMap(prev => ({ ...prev, [userId]: currentlyFollowing }))
+    }
   }
 
   if (loading) {
