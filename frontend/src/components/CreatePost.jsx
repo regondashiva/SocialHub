@@ -52,7 +52,8 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
   }
 
   const handleSubmit = async () => {
-    if (!caption.trim() && !image && !video) {
+    if (loading) return
+    if (!caption.trim() && !image && !video && !preview) {
       toast.error('Add a caption or media')
       return
     }

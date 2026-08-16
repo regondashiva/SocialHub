@@ -1,6 +1,7 @@
 import express from 'express'
 import User from '../models/User.js'
 import Post from '../models/Post.js'
+import Notification from '../models/Notification.js'
 import { authMiddleware } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -113,6 +114,17 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
     if (!currentUser.following.some(id => id.toString() === targetUserId.toString())) {
       currentUser.following.push(targetUserId)
       await currentUser.save()
+
+      // Notify target user
+      try {
+        await Notification.create({
+          recipient: targetUserId,
+          sender: currentUserId,
+          type: 'follow'
+        })
+      } catch (notifErr) {
+        console.warn('Follow notification note:', notifErr.message)
+      }
     }
 
     res.json({

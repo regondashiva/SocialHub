@@ -2,6 +2,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import Post from '../models/Post.js'
 import User from '../models/User.js'
+import Notification from '../models/Notification.js'
 import { authMiddleware } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -193,6 +194,20 @@ router.post('/:postId/like', authMiddleware, async (req, res) => {
       post.likedBy.push(req.userId)
       post.likes = post.likedBy.length
       await post.save()
+
+      // Notify post author if not own post
+      if (post.author && post.author.toString() !== req.userId.toString()) {
+        try {
+          await Notification.create({
+            recipient: post.author,
+            sender: req.userId,
+            type: 'like',
+            post: post._id
+          })
+        } catch (notifErr) {
+          console.warn('Like notification note:', notifErr.message)
+        }
+      }
     }
 
     res.json({ likes: post.likes })
@@ -269,6 +284,21 @@ router.post('/:postId/comments', authMiddleware, async (req, res) => {
 
     post.comments.push(newComment)
     await post.save()
+
+    // Notify post author if not own post
+    if (post.author && post.author.toString() !== req.userId.toString()) {
+      try {
+        await Notification.create({
+          recipient: post.author,
+          sender: req.userId,
+          type: 'comment',
+          post: post._id,
+          commentText: text.trim().slice(0, 100)
+        })
+      } catch (notifErr) {
+        console.warn('Comment notification note:', notifErr.message)
+      }
+    }
 
     // Return populated comment
     const responseComment = {

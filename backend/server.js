@@ -7,6 +7,7 @@ import postRoutes from './routes/posts.js'
 import storyRoutes from './routes/stories.js'
 import userRoutes from './routes/users.js'
 import adminRoutes from './routes/admin.js'
+import notificationRoutes from './routes/notifications.js'
 
 dotenv.config()
 
@@ -75,6 +76,7 @@ app.use('/api/posts', postRoutes)
 app.use('/api/stories', storyRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // Root & Health Check Endpoints
 app.get('/', (req, res) => {

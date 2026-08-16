@@ -11,7 +11,18 @@ export const usePostStore = create((set, get) => ({
     set({ loading: true })
     try {
       const response = await axios.get(`${API_URL}/posts`)
-      set({ posts: response.data, error: null })
+      const fetched = Array.isArray(response.data) ? response.data : []
+      
+      // Deduplicate posts strictly by unique ID
+      const seen = new Set()
+      const deduped = fetched.filter(p => {
+        const id = p._id || p.id
+        if (!id || seen.has(id)) return false
+        seen.add(id)
+        return true
+      })
+
+      set({ posts: deduped, error: null })
     } catch (err) {
       set({ error: err.response?.data?.message || 'Failed to fetch posts' })
     } finally {
@@ -22,8 +33,14 @@ export const usePostStore = create((set, get) => ({
   createPost: async (postData) => {
     try {
       const response = await axios.post(`${API_URL}/posts`, postData)
-      set({ posts: [response.data, ...get().posts] })
-      return response.data
+      const newPost = response.data
+      const newId = newPost._id || newPost.id
+
+      // Replace or prepend without duplicates
+      const currentPosts = get().posts
+      const filtered = currentPosts.filter(p => (p._id || p.id) !== newId)
+      set({ posts: [newPost, ...filtered] })
+      return newPost
     } catch (err) {
       set({ error: err.response?.data?.message || 'Failed to create post' })
       throw err
@@ -34,7 +51,7 @@ export const usePostStore = create((set, get) => ({
     try {
       const response = await axios.post(`${API_URL}/posts/${postId}/comments`, { text })
       const posts = get().posts.map(post => {
-        if (post._id === postId) {
+        if ((post._id || post.id) === postId) {
           return {
             ...post,
             comments: [...(post.comments || []), response.data]
@@ -53,7 +70,7 @@ export const usePostStore = create((set, get) => ({
     try {
       const response = await axios.post(`${API_URL}/posts/${postId}/like`)
       const posts = get().posts.map(p =>
-        p._id === postId ? { ...p, likes: response.data.likes || p.likes + 1 } : p
+        (p._id || p.id) === postId ? { ...p, likes: response.data.likes ?? (p.likes + 1) } : p
       )
       set({ posts })
       return response.data
@@ -66,7 +83,7 @@ export const usePostStore = create((set, get) => ({
     try {
       const response = await axios.post(`${API_URL}/posts/${postId}/unlike`)
       const posts = get().posts.map(p =>
-        p._id === postId ? { ...p, likes: response.data.likes || Math.max(0, p.likes - 1) } : p
+        (p._id || p.id) === postId ? { ...p, likes: response.data.likes ?? Math.max(0, p.likes - 1) } : p
       )
       set({ posts })
       return response.data
