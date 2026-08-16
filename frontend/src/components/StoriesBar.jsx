@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Play, Pause, Volume2, VolumeX, Heart, Send, X, Camera } from 'lucide-react'
+import { Plus, Play, Pause, Volume2, VolumeX, Heart, Send, X, Camera, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Cookie from 'js-cookie'
 import { useAuthStore } from '../store/authStore'
@@ -208,6 +208,27 @@ const StoriesBar = () => {
     }
   }
 
+  const handleDeleteStory = async () => {
+    if (!activeStory) return
+    const currentContent = activeStory.content?.[currentStoryIndex]
+    const storyId = currentContent?.id || activeStory.id
+
+    if (window.confirm('Delete this story?')) {
+      try {
+        const token = Cookie.get('token') || localStorage.getItem('token')
+        await fetch(`${API_URL}/stories/${storyId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        setActiveStory(null)
+        toast.success('Story deleted')
+        fetchBackendStories()
+      } catch (e) {
+        toast.error('Failed to delete story')
+      }
+    }
+  }
+
   return (
     <>
       {/* Hidden file input for uploading story */}
@@ -301,6 +322,11 @@ const StoriesBar = () => {
                   <span className="text-[10px] text-gray-300">Active</span>
                 </div>
                 <div className="flex items-center space-x-3">
+                  {(activeStory.isOwn || activeStory.username === user?.username) && (
+                    <button onClick={handleDeleteStory} className="text-white hover:text-red-400 p-1" title="Delete Story">
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </button>
+                  )}
                   <button onClick={() => setIsPlaying(!isPlaying)} className="text-white">
                     {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>

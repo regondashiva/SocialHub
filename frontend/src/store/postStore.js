@@ -90,5 +90,16 @@ export const usePostStore = create((set, get) => ({
     } catch (err) {
       throw err
     }
+  },
+
+  deletePost: async (postId) => {
+    try {
+      await axios.delete(`${API_URL}/posts/${postId}`)
+      const posts = get().posts.filter(p => (p._id || p.id) !== postId)
+      set({ posts })
+      return postId
+    } catch (err) {
+      throw err
+    }
   }
 }))

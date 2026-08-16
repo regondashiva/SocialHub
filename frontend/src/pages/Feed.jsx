@@ -36,8 +36,7 @@ function Feed({ activeView = 'feed', onViewChange, showNewPostModal, setShowNewP
     return () => clearInterval(interval)
   }, [optimizedFetchPosts])
 
-  const handleNewPost = async (postData) => {
-    await createPost(postData)
+  const handleNewPost = () => {
     setShowNewPostModal(false)
   }
 

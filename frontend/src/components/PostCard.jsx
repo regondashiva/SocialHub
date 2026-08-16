@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Smile, AlertTriangle, Share2, Copy, Link2, X } from 'lucide-react'
+import { 
+  Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Smile, 
+  AlertTriangle, Share2, Copy, Link2, X, Trash2 
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import CommentSection from './CommentSectionEnhanced'
 import { usePostStore } from '../store/postStore'
+import { useAuthStore } from '../store/authStore'
 import { toxicityService } from '../services/toxicityService'
 import { API_URL } from '../config/api'
 import toast from 'react-hot-toast'
@@ -16,6 +20,9 @@ const workingVideos = [
 ]
 
 function PostCard({ post }) {
+  const { user: currentUser } = useAuthStore()
+  const { likePost, unlikePost, createComment, deletePost } = usePostStore()
+
   const [liked, setLiked] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showComments, setShowComments] = useState(false)
@@ -26,7 +33,8 @@ function PostCard({ post }) {
   const [toxicityAlert, setToxicityAlert] = useState(null)
   const [isDetecting, setIsDetecting] = useState(false)
   const videoRef = useRef(null)
-  const { likePost, unlikePost, createComment } = usePostStore()
+
+  const isOwnPost = (post.author?._id || post.author) === currentUser?._id || post.author?.username === currentUser?.username
 
   const getVideoUrl = (post) => {
     if (post.video) return post.video
@@ -100,11 +108,21 @@ function PostCard({ post }) {
     }
   }
 
+  const handleDeletePost = async () => {
+    if (window.confirm('Delete this post?')) {
+      try {
+        await deletePost(post.id || post._id)
+        toast.success('Post deleted')
+      } catch (err) {
+        toast.error('Failed to delete post')
+      }
+    }
+  }
+
   const handleCommentSubmit = async (e) => {
     e.preventDefault()
     if (!commentText.trim()) return
 
-    // Synchronous toxicity validation before submission
     const toxicResult = await toxicityService.detectToxicity(commentText)
     if (toxicResult.is_toxic || toxicResult.toxicity_score >= 0.5) {
       toast.error('🚫 Comment blocked: Contains offensive words. Please rewrite.')
@@ -182,9 +200,21 @@ function PostCard({ post }) {
             )}
           </div>
         </div>
-        <button onClick={handleShareClick} className="text-gray-400 hover:text-white p-1">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+
+        <div className="flex items-center gap-1">
+          {isOwnPost && (
+            <button 
+              onClick={handleDeletePost} 
+              className="text-gray-500 hover:text-red-400 p-1.5 transition rounded-lg hover:bg-white/5"
+              title="Delete Post"
+            >
+              <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-400" />
+            </button>
+          )}
+          <button onClick={handleShareClick} className="text-gray-400 hover:text-white p-1">
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Main Media Canvas (Image or Video) */}
@@ -261,10 +291,25 @@ function PostCard({ post }) {
           <span>{post.caption}</span>
         </div>
 
+        {/* Comments Preview */}
+        {post.comments && post.comments.length > 0 && (
+          <div className="space-y-1 pt-1">
+            {post.comments.slice(-2).map((c, i) => {
+              const cAuthor = c.author?.username || (typeof c.author === 'string' ? c.author : 'user')
+              return (
+                <div key={c._id || i} className="text-xs text-white">
+                  <span className="font-semibold mr-1.5 text-gray-200">{cAuthor}</span>
+                  <span className="text-gray-300">{c.text}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         {/* Comment Drawer Toggle */}
         <button
           onClick={() => setShowComments(!showComments)}
-          className="text-gray-500 text-xs hover:text-gray-400 transition block pt-0.5"
+          className="text-gray-500 text-xs hover:text-gray-400 transition block pt-1"
         >
           {showComments ? 'Hide comments' : `View all ${post.comments?.length || 0} comments`}
         </button>

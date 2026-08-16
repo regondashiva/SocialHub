@@ -71,4 +71,21 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 })
 
+// DELETE /api/stories/:storyId - Delete own story
+router.delete('/:storyId', authMiddleware, async (req, res) => {
+  try {
+    const story = await Story.findById(req.params.storyId)
+    if (!story) return res.status(404).json({ message: 'Story not found' })
+
+    if (story.author.toString() !== req.userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this story' })
+    }
+
+    await Story.findByIdAndDelete(req.params.storyId)
+    res.json({ message: 'Story deleted successfully', storyId: req.params.storyId })
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete story' })
+  }
+})
+
 export default router
