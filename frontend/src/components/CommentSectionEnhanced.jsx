@@ -62,8 +62,9 @@ function CommentSection({ postId, showComments }) {
     if (e) e.preventDefault()
     if (!comment.trim()) return
 
-    if (toxicityAlert?.level === 'BLOCKED') {
-      toast.error('Comment blocked: violates community safety guidelines')
+    const toxicResult = await toxicityService.detectToxicity(comment)
+    if (toxicResult.is_toxic || toxicResult.toxicity_score >= 0.5) {
+      toast.error('🚫 Comment blocked: Contains inappropriate or abusive words. Please rewrite.')
       return
     }
 
@@ -71,8 +72,8 @@ function CommentSection({ postId, showComments }) {
     try {
       const response = await axios.post(`${API_URL}/posts/${postId}/comments`, {
         text: comment.trim(),
-        toxicityScore: toxicityAlert?.score || 0,
-        toxicityCategories: toxicityAlert?.categories || {}
+        toxicityScore: toxicResult.toxicity_score,
+        toxicityCategories: toxicResult.categories || {}
       })
 
       setComments(prev => [...prev, response.data])

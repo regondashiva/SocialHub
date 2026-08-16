@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { ImagePlus, X, MapPin, Smile, Hash, UserPlus, Video, Music, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePostStore } from '../store/postStore'
+import { toxicityService } from '../services/toxicityService'
 import toast from 'react-hot-toast'
 
 function CreatePost({ isOpen, onClose, onPostCreated }) {
@@ -56,6 +57,14 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     if (!caption.trim() && !image && !video && !preview) {
       toast.error('Add a caption or media')
       return
+    }
+
+    if (caption.trim()) {
+      const toxicResult = await toxicityService.detectToxicity(caption)
+      if (toxicResult.is_toxic || toxicResult.toxicity_score >= 0.5) {
+        toast.error('🚫 Post blocked: Caption contains offensive words. Please rewrite.')
+        return
+      }
     }
 
     setLoading(true)

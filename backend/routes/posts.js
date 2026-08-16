@@ -4,6 +4,7 @@ import Post from '../models/Post.js'
 import User from '../models/User.js'
 import Notification from '../models/Notification.js'
 import { authMiddleware } from '../middleware/auth.js'
+import { checkIsToxic } from '../utils/toxicityCheck.js'
 
 const router = express.Router()
 
@@ -129,6 +130,17 @@ router.get('/:postId', async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { caption, mediaType, image, video, thumbnail, duration, location, feeling } = req.body
+
+    // Strict toxicity check on post caption
+    if (caption) {
+      const toxicCheck = checkIsToxic(caption)
+      if (toxicCheck.isToxic) {
+        return res.status(400).json({
+          message: 'Post blocked: Caption violates community safety guidelines. Please remove offensive language.',
+          detectedWords: toxicCheck.matched
+        })
+      }
+    }
 
     const post = new Post({
       author: req.userId,
@@ -256,13 +268,15 @@ router.post('/:postId/comments', authMiddleware, async (req, res) => {
     }
 
     const score = Number(toxicityScore) || 0
+    const toxicCheck = checkIsToxic(text)
 
-    // Block highly toxic comments on server
-    if (score >= 0.75) {
+    // Strictly block toxic comments on server
+    if (toxicCheck.isToxic || score >= 0.5) {
       return res.status(400).json({ 
-        message: 'Comment blocked: violates community safety guidelines',
-        toxicityScore: score,
-        isBlocked: true
+        message: 'Comment blocked: Contains inappropriate or toxic words. Please be respectful.',
+        toxicityScore: Math.max(score, toxicCheck.score),
+        isBlocked: true,
+        detectedWords: toxicCheck.matched
       })
     }
 

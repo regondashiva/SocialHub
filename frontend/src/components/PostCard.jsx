@@ -104,8 +104,10 @@ function PostCard({ post }) {
     e.preventDefault()
     if (!commentText.trim()) return
 
-    if (toxicityAlert?.level === 'BLOCKED') {
-      toast.error('Comment violates community guidelines')
+    // Synchronous toxicity validation before submission
+    const toxicResult = await toxicityService.detectToxicity(commentText)
+    if (toxicResult.is_toxic || toxicResult.toxicity_score >= 0.5) {
+      toast.error('🚫 Comment blocked: Contains offensive words. Please rewrite.')
       return
     }
 
@@ -115,7 +117,8 @@ function PostCard({ post }) {
       setToxicityAlert(null)
       toast.success('Comment posted!')
     } catch (err) {
-      toast.error('Failed to post comment')
+      const msg = err.response?.data?.message || 'Failed to post comment'
+      toast.error(msg)
     }
   }
 
