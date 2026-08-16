@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { 
   Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Smile, 
   AlertTriangle, Share2, Copy, Link2, X, Trash2 
@@ -176,7 +177,10 @@ function PostCard({ post }) {
     <article className="w-full bg-black border border-[#262626] rounded-xl overflow-hidden mb-4 relative">
       {/* Instagram Post Header */}
       <div className="flex items-center justify-between px-3 py-2.5">
-        <div className="flex items-center space-x-2.5">
+        <Link 
+          to={`/profile/${post.author?._id || post.author?.username || ''}`}
+          className="flex items-center space-x-2.5 hover:opacity-85 transition group"
+        >
           <div className="p-[1.5px] rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
             {post.author?.avatar ? (
               <img
@@ -192,14 +196,14 @@ function PostCard({ post }) {
           </div>
           <div>
             <div className="flex items-center space-x-1.5">
-              <span className="font-semibold text-xs text-white">{post.author?.username || 'user'}</span>
+              <span className="font-semibold text-xs text-white group-hover:underline">{post.author?.username || 'user'}</span>
               <span className="text-gray-500 text-xs">• {formatTimeAgo(post.createdAt)}</span>
             </div>
             {post.location && (
               <span className="text-[10px] text-gray-400 block">{post.location}</span>
             )}
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-1">
           {isOwnPost && (

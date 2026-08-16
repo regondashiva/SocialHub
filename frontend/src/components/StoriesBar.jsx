@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Play, Pause, Volume2, VolumeX, Heart, Send, X, Camera, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Cookie from 'js-cookie'
@@ -8,8 +9,10 @@ import toast from 'react-hot-toast'
 
 const StoriesBar = () => {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [stories, setStories] = useState([])
   const [activeStory, setActiveStory] = useState(null)
+  const [likedStories, setLikedStories] = useState({})
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
@@ -316,11 +319,21 @@ const StoriesBar = () => {
 
               {/* Story Header */}
               <div className="absolute top-7 left-3 right-3 z-30 flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
+                <div 
+                  onClick={() => {
+                    setActiveStory(null)
+                    navigate(`/profile/${activeStory.id || activeStory.username}`)
+                  }}
+                  className="flex items-center space-x-2.5 cursor-pointer hover:opacity-80 transition"
+                  title="View Profile"
+                >
                   <img src={activeStory.avatar || 'https://picsum.photos/seed/user/100/100'} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-white/20" />
-                  <span className="text-xs font-semibold text-white">{activeStory.username}</span>
-                  <span className="text-[10px] text-gray-300">Active</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-white hover:underline">@{activeStory.username}</span>
+                    <span className="text-[10px] text-gray-300">View Profile</span>
+                  </div>
                 </div>
+
                 <div className="flex items-center space-x-3">
                   {(activeStory.isOwn || activeStory.username === user?.username) && (
                     <button onClick={handleDeleteStory} className="text-white hover:text-red-400 p-1" title="Delete Story">
@@ -360,20 +373,40 @@ const StoriesBar = () => {
                 <div className="absolute inset-y-0 right-0 w-2/3 z-20" onClick={goToNextContent} />
               </div>
 
-              {/* Story Bottom Reply Bar */}
-              <div className="absolute bottom-4 left-3 right-3 z-30 flex items-center space-x-3">
-                <input
-                  type="text"
-                  placeholder={`Reply to ${activeStory.username}...`}
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 bg-transparent border border-white/40 rounded-full px-4 py-2 text-xs text-white placeholder-gray-300 focus:outline-none focus:border-white"
-                />
-                <button className="text-white hover:scale-110 transition">
-                  <Heart className="w-6 h-6" />
-                </button>
-                <button className="text-white hover:scale-110 transition">
-                  <Send className="w-6 h-6" />
+              {/* Story Bottom Reply & Like Bar */}
+              <div className="absolute bottom-4 left-3 right-3 z-30 flex items-center space-x-2">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (!replyText.trim()) return
+                    toast.success(`Reply sent to @${activeStory.username}! 💬`)
+                    setReplyText('')
+                  }} 
+                  className="flex-1 flex items-center space-x-2 bg-black/50 backdrop-blur-md border border-white/30 rounded-full px-3 py-1.5"
+                >
+                  <input
+                    type="text"
+                    placeholder={`Reply to @${activeStory.username}...`}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    className="flex-1 bg-transparent text-xs text-white placeholder-gray-300 focus:outline-none"
+                  />
+                  <button type="submit" className="text-white hover:text-[#0095F6] transition">
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+
+                <button 
+                  onClick={() => {
+                    const storyId = activeStory.id
+                    const nextLiked = !likedStories[storyId]
+                    setLikedStories(prev => ({ ...prev, [storyId]: nextLiked }))
+                    if (nextLiked) toast.success(`Liked @${activeStory.username}'s story ❤️`)
+                  }}
+                  className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:scale-110 active:scale-90 transition border border-white/20"
+                  title="Like Story"
+                >
+                  <Heart className={`w-5 h-5 ${likedStories[activeStory.id] ? 'text-red-500 fill-red-500' : 'text-white'}`} />
                 </button>
               </div>
             </div>

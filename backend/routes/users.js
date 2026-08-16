@@ -54,17 +54,25 @@ router.put('/profile', authMiddleware, async (req, res) => {
   }
 })
 
-// GET /api/users/:userId - Get full profile + user posts
+// GET /api/users/:userId - Get full profile + user posts (supports ObjectId & username)
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params
-    const user = await User.findById(userId).select('-password').lean()
+    let user = null
+
+    if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+      user = await User.findById(userId).select('-password').lean()
+    }
+    if (!user) {
+      user = await User.findOne({ username: userId.toLowerCase().trim() }).select('-password').lean()
+    }
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }
 
     // Fetch posts created by this user
-    const posts = await Post.find({ author: userId })
+    const posts = await Post.find({ author: user._id })
       .populate('author', 'username avatar fullName')
       .populate('comments.author', 'username avatar fullName')
       .sort({ createdAt: -1 })
