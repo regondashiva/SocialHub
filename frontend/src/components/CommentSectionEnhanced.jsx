@@ -3,6 +3,7 @@ import { AlertTriangle, Lightbulb, Send, MessageCircle, RefreshCw } from 'lucide
 import { toxicityService } from '../services/toxicityService'
 import toast from 'react-hot-toast'
 import axios from 'axios'
+import { API_URL } from '../config/api'
 
 function CommentSection({ postId, showComments }) {
   const [comment, setComment] = useState('')
@@ -24,7 +25,7 @@ function CommentSection({ postId, showComments }) {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/posts/${postId}/comments`)
+      const response = await axios.get(`${API_URL}/posts/${postId}/comments`)
       setComments(response.data || [])
     } catch (error) {
       console.error('Error fetching comments:', error)
@@ -120,7 +121,7 @@ function CommentSection({ postId, showComments }) {
     try {
       setIsUpdating(true)
       const response = await axios.post(
-        `http://localhost:5000/api/posts/${postId}/comments`,
+        `${API_URL}/posts/${postId}/comments`,
         { 
           text: comment, 
           toxicityScore: toxicityAlert?.score || 0,
@@ -165,7 +166,7 @@ function CommentSection({ postId, showComments }) {
 
   const handleDeleteComment = async (commentId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/posts/${postId}/comments/${commentId}`)
+      await axios.delete(`${API_URL}/posts/${postId}/comments/${commentId}`)
       
       // Remove comment from local state
       setComments(prevComments => prevComments.filter(c => c._id !== commentId))
@@ -186,7 +187,7 @@ function CommentSection({ postId, showComments }) {
         return
       }
 
-      await axios.put(`http://localhost:5000/api/posts/${postId}/comments/${commentId}`, {
+      await axios.put(`${API_URL}/posts/${postId}/comments/${commentId}`, {
         text: newText,
         toxicityScore: result.toxicity_score,
         toxicityCategories: result.categories,

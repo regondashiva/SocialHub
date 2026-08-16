@@ -84,19 +84,28 @@ MongoDB connected
 
 ### Step 4: ML Service Setup
 
-In a new terminal:
+**Windows (PowerShell / CMD):**
+```powershell
+cd ml-service
 
+# Create & activate virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# Install dependencies
+python -m pip install -r requirements.txt
+
+# Start ML service
+python main.py
+```
+
+**macOS / Linux:**
 ```bash
 cd ml-service
 
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Mac/Linux:
+# Create & activate virtual environment
+python3 -m venv venv
 source venv/bin/activate
-# Windows:
-venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt

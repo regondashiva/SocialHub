@@ -1,200 +1,69 @@
-/* App.css - Custom styles for Social Media App */
+/* App.css - Instagram Dark Mode Styles */
 
-/* Custom Tailwind colors and utilities */
 :root {
   --bg-primary: #000000;
-  --bg-secondary: #111111;
-  --bg-tertiary: #1a1a1a;
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --accent: #5865F2;
-  --accent-hover: #4752C4;
-  --border: #2a2a2a;
+  --bg-secondary: #121212;
+  --bg-elevated: #1C1C1E;
+  --text-primary: #F5F5F5;
+  --text-secondary: #A8A8A8;
+  --accent: #0095F6;
+  --border: #262626;
 }
 
-/* Custom animations */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+/* Instagram Card Utility */
+.glass-card, .ig-card {
+  background: #000000;
+  border: 1px solid #262626;
+  border-radius: 0.5rem;
 }
 
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
+.ig-panel {
+  background: #000000;
+  border-bottom: 1px solid #262626;
 }
 
-.animate-pulse-slow {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* Custom scrollbar for webkit browsers */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
-}
-
-/* Glass morphism effect */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* Instagram Gradient Text */
+.gradient-text-neon, .gradient-text-ig {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Loading spinner */
-.spinner {
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-left-color: #5865F2;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
+/* AI Toxicity Status Badges */
+.badge-toxicity-safe {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34D399;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.badge-toxicity-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #FBBF24;
 }
 
-/* Hover effects */
-.hover-scale {
-  transition: transform 0.2s ease;
+.badge-toxicity-alert {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #F87171;
 }
 
-.hover-scale:hover {
-  transform: scale(1.05);
+/* Skeleton Shimmer Loading */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #121212 0%,
+    #262626 50%,
+    #121212 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
-.hover-opacity {
-  transition: opacity 0.2s ease;
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-.hover-opacity:hover {
-  opacity: 0.8;
-}
 
-/* Mobile responsive adjustments */
-@media (max-width: 640px) {
-  .mobile-padding {
-    padding: 0.75rem;
-  }
-  
-  .mobile-text {
-    font-size: 0.875rem;
-  }
-}
-
-/* Dark mode specific styles */
-.dark-mode {
-  color-scheme: dark;
-}
-
-/* Focus styles for accessibility */
-.focus-ring:focus {
-  outline: 2px solid #5865F2;
-  outline-offset: 2px;
-}
-
-/* Toast notification styles */
-.toast-success {
-  background: #10b981;
-  color: white;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.toast-error {
-  background: #ef4444;
-  color: white;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-/* Button styles */
-.btn-primary {
-  background: #5865F2;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: #4752C4;
-}
-
-.btn-secondary {
-  background: transparent;
-  color: #5865F2;
-  border: 1px solid #5865F2;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: #5865F2;
-  color: white;
-}
-
-/* Input styles */
-.input-field {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  color: white;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: #5865F2;
-}
-
-.input-field::placeholder {
-  color: #6b7280;
-}

@@ -6,7 +6,7 @@ import axios from 'axios'
 import mongoose from 'mongoose'
 
 const router = express.Router()
-const ML_API = 'http://localhost:8000'
+const ML_API = process.env.ML_API_URL || 'http://localhost:8000'
 
 router.get('/', async (req, res) => {
   try {
@@ -276,14 +276,20 @@ router.get('/', async (req, res) => {
 
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { caption, image } = req.body
+    const { caption, mediaType, image, video, thumbnail, duration, location, feeling } = req.body
 
     // Try to save to database first
     try {
       const post = new Post({
         author: req.userId,
         caption,
-        image
+        mediaType: mediaType || 'image',
+        image: image || '',
+        video: video || '',
+        thumbnail: thumbnail || '',
+        duration: duration || null,
+        location: location || '',
+        feeling: feeling || ''
       })
 
       await post.save()
@@ -299,8 +305,14 @@ router.post('/', authMiddleware, async (req, res) => {
           username: 'demo_user',
           avatar: ''
         },
-        caption: caption || 'New demo post!',
-        image: image || 'https://picsum.photos/seed/newpost/600/400.jpg',
+        caption: caption || 'New post',
+        mediaType: mediaType || 'image',
+        image: image || '',
+        video: video || '',
+        thumbnail: thumbnail || '',
+        duration: duration || null,
+        location: location || '',
+        feeling: feeling || '',
         likes: 0,
         likedBy: [],
         comments: [],

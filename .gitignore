@@ -12,8 +12,10 @@ __pycache__/
 
 # Build outputs
 dist/
+.dist/
 build/
 *.egg-info/
+.qodo/
 
 # IDE
 .vscode/

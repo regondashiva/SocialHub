@@ -1,10 +1,12 @@
+import { API_URL } from '../config/api'
+
 // Update reel posts using the API
 const updateReels = async () => {
   try {
     console.log('🔄 Fetching posts from API...');
     
     // Get all posts
-    const response = await fetch('http://localhost:5000/api/posts');
+    const response = await fetch(`${API_URL}/posts`);
     const posts = await response.json();
     
     console.log(`📝 Found ${posts.length} posts`);
@@ -42,7 +44,7 @@ const updateReels = async () => {
       };
       
       try {
-        const updateResponse = await fetch(`http://localhost:5000/api/posts/${post.id}`, {
+        const updateResponse = await fetch(`${API_URL}/posts/${post.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -52,8 +54,7 @@ const updateReels = async () => {
         });
         
         if (updateResponse.ok) {
-          console.log(`✅ Updated post ${post.id} to be a reel`);
-          console.log(`🎬 Video: ${reelVideos[i]}`);
+          console.log(`✅ Updated post ${post.id} with video: ${reelVideos[i]}`);
         } else {
           console.error(`❌ Failed to update post ${post.id}: ${updateResponse.status}`);
         }
@@ -62,10 +63,10 @@ const updateReels = async () => {
       }
     }
     
-    console.log('🎉 Update process completed!');
+    console.log('🎉 Reel update process completed!');
     
     // Verify the updates
-    const verifyResponse = await fetch('http://localhost:5000/api/posts');
+    const verifyResponse = await fetch(`${API_URL}/posts`);
     const updatedPosts = await verifyResponse.json();
     const reelPosts = updatedPosts.filter(post => post.mediaType === 'reel');
     

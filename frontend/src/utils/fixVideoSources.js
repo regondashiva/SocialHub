@@ -1,10 +1,12 @@
+import { API_URL } from '../config/api'
+
 // Fix video sources with working URLs
 const fixVideoSources = async () => {
   try {
     console.log('🔄 Fixing video sources with working URLs...');
     
     // Get all posts
-    const response = await fetch('http://localhost:5000/api/posts');
+    const response = await fetch(`${API_URL}/posts`);
     const posts = await response.json();
     
     console.log(`📝 Found ${posts.length} posts`);
@@ -29,16 +31,17 @@ const fixVideoSources = async () => {
     
     for (let i = 0; i < postsToUpdate.length; i++) {
       const post = postsToUpdate[i];
+      const videoUrl = workingVideos[i % workingVideos.length];
       
       const updateData = {
         mediaType: 'reel',
-        video: workingVideos[i],
+        video: videoUrl,
         thumbnail: `https://picsum.photos/seed/reel${i + 1}/400/800.jpg`,
         duration: 180 + (i * 30)
       };
       
       try {
-        const updateResponse = await fetch(`http://localhost:5000/api/posts/${post.id}`, {
+        const updateResponse = await fetch(`${API_URL}/posts/${post.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -48,19 +51,19 @@ const fixVideoSources = async () => {
         });
         
         if (updateResponse.ok) {
-          console.log(`✅ Updated post ${post.id} with working video: ${workingVideos[i]}`);
+          console.log(`✅ Updated post ${post.id} with working video: ${videoUrl}`);
         } else {
-          console.error(`❌ Failed to update post ${post.id}: ${updateResponse.status}`);
+          console.error(`❌ Failed to update post ${post.id}`);
         }
-      } catch (error) {
-        console.error(`❌ Error updating post ${post.id}:`, error.message);
+      } catch (err) {
+        console.error(`❌ Error updating post ${post.id}:`, err);
       }
     }
     
-    console.log('🎉 Video sources fix completed!');
+    console.log('✅ All posts updated with working video sources!');
     
     // Verify the updates
-    const verifyResponse = await fetch('http://localhost:5000/api/posts');
+    const verifyResponse = await fetch(`${API_URL}/posts`);
     const updatedPosts = await verifyResponse.json();
     const reelPosts = updatedPosts.filter(post => post.mediaType === 'reel');
     

@@ -108,10 +108,20 @@ Backend runs on: http://localhost:5000
 
 ### 4. ML Service Setup
 
-```bash
+**Windows (PowerShell / CMD):**
+```powershell
 cd ml-service
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+venv\Scripts\activate
+python -m pip install -r requirements.txt
+python main.py
+```
+
+**macOS / Linux:**
+```bash
+cd ml-service
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```

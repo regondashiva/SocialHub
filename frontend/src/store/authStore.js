@@ -1,8 +1,7 @@
 import { create } from 'zustand'
 import axios from 'axios'
 import Cookie from 'js-cookie'
-
-const API_URL = 'http://localhost:5000/api'
+import { API_URL } from '../config/api'
 
 export const useAuthStore = create((set) => ({
   user: null,

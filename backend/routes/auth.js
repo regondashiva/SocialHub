@@ -49,7 +49,7 @@ router.post('/login', async (req, res) => {
         email: 'demo@socialhub.com',
         reputationScore: 100
       }
-      
+
       const token = jwt.sign({ userId: mockUser._id }, JWT_SECRET, { expiresIn: '7d' })
 
       return res.json({

@@ -24,10 +24,19 @@ npm run dev
 ```
 
 #### Terminal 3 - ML Service
+
+**Windows (PowerShell):**
+```powershell
+cd ml-service
+venv\Scripts\activate
+python -m pip install -r requirements.txt
+python main.py
+```
+
+**macOS / Linux:**
 ```bash
 cd ml-service
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```

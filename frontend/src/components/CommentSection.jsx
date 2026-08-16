@@ -3,6 +3,7 @@ import { AlertTriangle, Lightbulb, Send, MessageCircle } from 'lucide-react'
 import { toxicityService } from '../services/toxicityService'
 import toast from 'react-hot-toast'
 import axios from 'axios'
+import { API_URL } from '../config/api'
 
 function CommentSection({ postId, showComments }) {
   const [comment, setComment] = useState('')
@@ -18,7 +19,7 @@ function CommentSection({ postId, showComments }) {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/posts/${postId}/comments`)
+      const response = await axios.get(`${API_URL}/posts/${postId}/comments`)
       setComments(response.data || [])
     } catch (error) {
       console.error('Error fetching comments:', error)
@@ -70,7 +71,7 @@ function CommentSection({ postId, showComments }) {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/posts/${postId}/comments`,
+        `${API_URL}/posts/${postId}/comments`,
         { text: comment, toxicityScore: toxicityAlert?.score || 0 }
       )
       // Add new comment to the existing list

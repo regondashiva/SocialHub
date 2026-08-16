@@ -1,9 +1,11 @@
 import axios from 'axios'
-
-const ML_API_URL = 'http://localhost:8000'
+import { ML_API_URL } from '../config/api'
 
 export const toxicityService = {
   async detectToxicity(text, language = 'en') {
+    if (!text || !text.trim()) {
+      return { toxicity_score: 0, categories: {}, is_toxic: false }
+    }
     try {
       const response = await axios.post(`${ML_API_URL}/detect`, {
         text,
@@ -11,7 +13,7 @@ export const toxicityService = {
       })
       return response.data
     } catch (error) {
-      console.error('Toxicity detection error:', error)
+      console.warn('ML Service detect warning:', error.message)
       return {
         toxicity_score: 0,
         categories: {},
@@ -21,11 +23,12 @@ export const toxicityService = {
   },
 
   async suggestRewrite(text) {
+    if (!text || !text.trim()) return null
     try {
       const response = await axios.post(`${ML_API_URL}/suggest-rewrite`, { text })
-      return response.data.suggestion
+      return response.data.suggested_rewrite || response.data.suggestion || response.data.suggested || null
     } catch (error) {
-      console.error('Rewrite suggestion error:', error)
+      console.warn('ML Service rewrite warning:', error.message)
       return null
     }
   },

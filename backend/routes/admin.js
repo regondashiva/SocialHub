@@ -42,7 +42,7 @@ router.get('/flagged-comments', authMiddleware, async (req, res) => {
           createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
         }
       ]
-      
+
       res.json(mockFlaggedComments)
     }
   } catch (error) {
@@ -74,7 +74,7 @@ router.get('/toxicity-stats', authMiddleware, async (req, res) => {
         flaggedPosts: 1,
         toxicityRate: '33.33%'
       }
-      
+
       res.json(mockStats)
     }
   } catch (error) {

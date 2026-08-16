@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react'
-import { ImagePlus, X, MapPin, Smile, Hash, Calendar, UserPlus, Video, Music, FileText, Palette, Crop } from 'lucide-react'
+import { ImagePlus, X, MapPin, Smile, Hash, UserPlus, Video, Music, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePostStore } from '../store/postStore'
 import toast from 'react-hot-toast'
 
-function CreatePost({ onPostCreated }) {
+function CreatePost({ isOpen, onClose, onPostCreated }) {
   const [caption, setCaption] = useState('')
   const [image, setImage] = useState(null)
   const [video, setVideo] = useState(null)
@@ -41,7 +41,6 @@ function CreatePost({ onPostCreated }) {
         reader.onloadend = () => setPreview(reader.result)
         reader.readAsDataURL(file)
         
-        // Get video duration
         const videoElement = document.createElement('video')
         videoElement.src = URL.createObjectURL(file)
         videoElement.onloadedmetadata = () => {
@@ -79,7 +78,8 @@ function CreatePost({ onPostCreated }) {
       setDuration('')
       setLocation('')
       setFeeling('')
-      onPostCreated(postData)
+      if (onPostCreated) onPostCreated(postData)
+      if (onClose) onClose()
       toast.success('Post created successfully!')
     } catch (error) {
       toast.error('Failed to create post')
@@ -89,102 +89,133 @@ function CreatePost({ onPostCreated }) {
     }
   }
 
-  const clearMedia = () => {
-    setImage(null)
-    setVideo(null)
-    setPreview(null)
-    setDuration('')
-  }
-
-  const handleDragOver = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    const files = Array.from(e.dataTransfer.files)
-    const imageFile = files.find(file => file.type.startsWith('image/'))
-    
-    if (imageFile) {
-      if (imageFile.size > 10 * 1024 * 1024) {
-        toast.error('Image size should be less than 10MB')
-        return
-      }
-      setImage(imageFile)
-      const reader = new FileReader()
-      reader.onloadend = () => setPreview(reader.result)
-      reader.readAsDataURL(imageFile)
-    }
-  }
-
   const feelings = [
-    '😊 Happy', '😢 Sad', '😡 Angry', '😴 Tired', 
-    '🎉 Excited', '😍 In Love', '🤔 Thinking', '😎 Cool'
+    '😊 Happy', '🎉 Excited', '🤔 Thinking', '😎 Chill', 
+    '🚀 Building', '💡 Inspired', '🔥 On Fire'
   ]
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6"
-    >
+  const content = (
+    <div className="glass-card border border-white/10 p-5 rounded-2xl shadow-2xl relative">
+      {onClose && (
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Header */}
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-          <UserPlus className="w-5 h-5 text-white" />
+      <div className="flex items-start space-x-3 mb-4">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-cyan flex items-center justify-center shadow-glow-violet flex-shrink-0">
+          <Sparkles className="w-5 h-5 text-white animate-pulse" />
         </div>
         <div className="flex-1">
           <textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
-            placeholder="What's on your mind?"
-            className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none text-lg"
-            rows="1"
-            onInput={(e) => {
-              e.target.style.height = 'auto'
-              e.target.style.height = e.target.scrollHeight + 'px'
-            }}
+            placeholder="Share your thought or spark a idea..."
+            className="w-full bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none text-base font-normal pt-1"
+            rows="2"
           />
         </div>
       </div>
 
-      {/* Image Preview */}
+      {/* Preview */}
       <AnimatePresence>
         {preview && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="relative mb-4 rounded-xl overflow-hidden"
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="relative mb-4 rounded-xl overflow-hidden border border-white/10"
           >
-            <img src={preview} alt="preview" className="w-full max-h-[400px] object-contain bg-black" />
+            <img src={preview} alt="preview" className="w-full max-h-[300px] object-contain bg-obsidian" />
             <button
               onClick={() => {
                 setImage(null)
                 setPreview(null)
               }}
-              className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm p-2 rounded-full hover:bg-black/70 transition"
+              className="absolute top-2 right-2 bg-obsidian-card backdrop-blur-md p-2 rounded-full text-white hover:bg-red-500/20 transition"
             >
-              <X className="w-4 h-4 text-white" />
+              <X className="w-4 h-4" />
             </button>
-            
-            {/* Image overlay options */}
-            <div className="absolute bottom-2 left-2 right-2 flex justify-between">
-              <div className="flex space-x-2">
-                <button className="bg-black/50 backdrop-blur-sm p-2 rounded-full hover:bg-black/70 transition">
-                  <Palette className="w-4 h-4 text-white" />
-                </button>
-                <button className="bg-black/50 backdrop-blur-sm p-2 rounded-full hover:bg-black/70 transition">
-                  <Crop className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Media Type Tabs */}
+      <div className="flex space-x-2 mb-4">
+        {[
+          { type: 'image', label: 'Photo', icon: ImagePlus },
+          { type: 'video', label: 'Video', icon: Video },
+          { type: 'reel', label: 'Reel', icon: Music },
+        ].map(({ type, label, icon: Icon }) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setMediaType(type)}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+              mediaType === type
+                ? 'bg-accent/20 border border-accent/50 text-accent shadow-glow-violet'
+                : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Media Drop Zone */}
+      {!preview && (
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-white/10 rounded-xl p-5 mb-4 text-center hover:border-accent/50 hover:bg-white/[0.02] transition-all duration-200 cursor-pointer group"
+        >
+          <div className="flex flex-col items-center space-y-2">
+            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ImagePlus className="w-6 h-6 text-accent" />
+            </div>
+            <p className="text-xs text-gray-300 font-semibold">
+              Click or drag to upload {mediaType}
+            </p>
+            <p className="text-[10px] text-gray-500">Max size 100MB</p>
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center justify-between border-t border-white/10 pt-3">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-xs font-semibold text-gray-400 hover:text-cyan flex items-center space-x-1 transition"
+        >
+          <Hash className="w-4 h-4" />
+          <span>{showAdvanced ? 'Less Options' : 'Location & Feeling'}</span>
+        </button>
+
+        <div className="flex items-center space-x-3">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs font-semibold text-gray-400 hover:text-white transition"
+            >
+              Cancel
+            </button>
+          )}
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={handleSubmit}
+            disabled={loading || (!caption.trim() && !image && !video && !preview)}
+            className="bg-neon-gradient text-white px-5 py-2 rounded-xl text-xs font-bold shadow-glow-violet hover:shadow-glow-cyan transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Publishing...' : 'Share Post'}
+          </motion.button>
+        </div>
+      </div>
 
       {/* Advanced Options */}
       <AnimatePresence>
@@ -193,31 +224,28 @@ function CreatePost({ onPostCreated }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-4 space-y-3"
+            className="mt-3 pt-3 border-t border-white/5 space-y-2"
           >
-            {/* Location */}
             <div className="flex items-center space-x-2">
               <MapPin className="w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Add location"
+                placeholder="Add location tag..."
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
               />
             </div>
-
-            {/* Feeling */}
             <div className="flex items-center space-x-2">
               <Smile className="w-4 h-4 text-gray-400" />
               <select
                 value={feeling}
                 onChange={(e) => setFeeling(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 text-sm"
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-accent"
               >
-                <option value="">Add feeling</option>
-                {feelings.map((feeling) => (
-                  <option key={feeling} value={feeling}>{feeling}</option>
+                <option value="" className="bg-obsidian">Select current mood...</option>
+                {feelings.map((f) => (
+                  <option key={f} value={f} className="bg-obsidian">{f}</option>
                 ))}
               </select>
             </div>
@@ -225,138 +253,6 @@ function CreatePost({ onPostCreated }) {
         )}
       </AnimatePresence>
 
-      {/* Media Type Selection */}
-      <div className="flex space-x-2 mb-4">
-        <button
-          onClick={() => setMediaType('image')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-            mediaType === 'image'
-              ? 'bg-purple-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          <ImagePlus className="w-4 h-4 inline mr-2" />
-          Photo
-        </button>
-        <button
-          onClick={() => setMediaType('video')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-            mediaType === 'video'
-              ? 'bg-purple-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          <Video className="w-4 h-4 inline mr-2" />
-          Video
-        </button>
-        <button
-          onClick={() => setMediaType('reel')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-            mediaType === 'reel'
-              ? 'bg-purple-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          <Music className="w-4 h-4 inline mr-2" />
-          Reel
-        </button>
-      </div>
-
-      {/* Media Upload Area */}
-      {!preview && (
-        <div
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          className="border-2 border-dashed border-gray-700 rounded-xl p-8 mb-4 text-center hover:border-purple-500 transition-colors cursor-pointer"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <div className="flex flex-col items-center space-y-3">
-            <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center">
-              {mediaType === 'image' ? (
-                <ImagePlus className="w-8 h-8 text-gray-400" />
-              ) : mediaType === 'video' ? (
-                <Video className="w-8 h-8 text-gray-400" />
-              ) : (
-                <Music className="w-8 h-8 text-gray-400" />
-              )}
-            </div>
-            <div>
-              <p className="text-white font-semibold">
-                {mediaType === 'image' ? 'Drag photos here' : 
-                 mediaType === 'video' ? 'Drag videos here' : 'Drag reels here'}
-              </p>
-              <p className="text-gray-400 text-sm">or click to browse</p>
-            </div>
-            <p className="text-gray-500 text-xs">
-              {mediaType === 'image' ? 'Recommended: Upload high-quality photos' :
-               mediaType === 'video' ? 'Maximum size: 100MB' : 'Maximum size: 100MB, under 60 seconds'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {/* Media Options */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center space-x-2 text-gray-400 hover:text-purple-500 transition"
-          >
-            <ImagePlus className="w-5 h-5" />
-            <span className="text-sm">Photo</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 text-gray-400 hover:text-purple-500 transition">
-            <Video className="w-5 h-5" />
-            <span className="text-sm">Video</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 text-gray-400 hover:text-purple-500 transition">
-            <Music className="w-5 h-5" />
-            <span className="text-sm">Music</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 text-gray-400 hover:text-purple-500 transition">
-            <FileText className="w-5 h-5" />
-            <span className="text-sm">Article</span>
-          </button>
-          
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center space-x-2 text-gray-400 hover:text-purple-500 transition"
-          >
-            <Hash className="w-5 h-5" />
-            <span className="text-sm">More</span>
-          </button>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => {
-              setCaption('')
-              setImage(null)
-              setPreview(null)
-              setLocation('')
-              setFeeling('')
-              setShowAdvanced(false)
-            }}
-            className="text-gray-400 hover:text-white transition"
-          >
-            Cancel
-          </button>
-          
-          <button
-            onClick={handleSubmit}
-            disabled={loading || (!caption.trim() && !image)}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-semibold transition"
-          >
-            {loading ? 'Posting...' : 'Post'}
-          </button>
-        </div>
-      </div>
-
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -364,17 +260,22 @@ function CreatePost({ onPostCreated }) {
         onChange={handleMediaChange}
         className="hidden"
       />
-
-      {/* Character count */}
-      {caption.length > 0 && (
-        <div className="mt-2 text-right">
-          <span className={`text-xs ${caption.length > 2000 ? 'text-red-500' : 'text-gray-400'}`}>
-            {caption.length}/2000
-          </span>
-        </div>
-      )}
-    </motion.div>
+    </div>
   )
+
+  if (isOpen !== undefined) {
+    if (!isOpen) return null
+    return (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-lg">
+          {content}
+        </motion.div>
+      </div>
+    )
+  }
+
+  return content
 }
 
 export default CreatePost
+

@@ -1,561 +1,190 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Play, Pause, Volume2, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Play, Pause, Volume2, VolumeX, Heart, Send, X, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Cookie from 'js-cookie'
+import { useAuthStore } from '../store/authStore'
+import { API_URL } from '../config/api'
+import toast from 'react-hot-toast'
 
 const StoriesBar = () => {
+  const { user } = useAuthStore()
   const [stories, setStories] = useState([])
   const [activeStory, setActiveStory] = useState(null)
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
-  const [isMuted, setIsMuted] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [replyText, setReplyText] = useState('')
+  const [uploading, setUploading] = useState(false)
   const videoRef = useRef(null)
   const progressInterval = useRef(null)
+  const fileInputRef = useRef(null)
 
-  // Enhanced stories data with real content
-  useEffect(() => {
-    const mockStories = [
-      {
-        id: '1',
-        username: 'Your Story',
-        avatar: '',
+  // Fetch stories from MongoDB
+  const fetchBackendStories = async () => {
+    try {
+      const res = await fetch(`${API_URL}/stories`)
+      const dbStories = await res.json()
+
+      const demoStories = [
+        {
+          id: 's1',
+          username: 'aria_dev',
+          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces',
+          hasStory: true,
+          viewed: false,
+          content: [
+            { type: 'image', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=1200&fit=crop', duration: 4000 },
+            { type: 'image', url: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800&h=1200&fit=crop', duration: 4000 }
+          ]
+        },
+        {
+          id: 's2',
+          username: 'dev_sharma',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces',
+          hasStory: true,
+          viewed: false,
+          content: [
+            { type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 5000 }
+          ]
+        },
+        {
+          id: 's3',
+          username: 'elena_travel',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
+          hasStory: true,
+          viewed: false,
+          content: [
+            { type: 'image', url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&h=1200&fit=crop', duration: 4000 }
+          ]
+        }
+      ]
+
+      // Combine User Own Story + DB Stories + Demo Stories
+      const ownStory = {
+        id: 'own',
+        username: 'Your story',
+        avatar: user?.avatar || '',
         isOwn: true,
         hasStory: false
-      },
-      {
-        id: '2',
-        username: 'alice_demo',
-        avatar: 'https://picsum.photos/seed/alice/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/alice1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 5000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/alice3/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '3',
-        username: 'bob_demo',
-        avatar: 'https://picsum.photos/seed/bob/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: true,
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 4000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/bob2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '4',
-        username: 'jane_demo',
-        avatar: 'https://picsum.photos/seed/jane/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 3500
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/jane1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 4500
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/jane3/400/600.jpg',
-            duration: 2500
-          }
-        ]
-      },
-      {
-        id: '5',
-        username: 'tech_demo',
-        avatar: 'https://picsum.photos/seed/tech/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 4000
-          }
-        ]
-      },
-      {
-        id: '6',
-        username: 'travel_demo',
-        avatar: 'https://picsum.photos/seed/travel/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 45 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 3000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/travel1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 4000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/travel2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '7',
-        username: 'food_demo',
-        avatar: 'https://picsum.photos/seed/food/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: true,
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 5000
-          }
-        ]
-      },
-      {
-        id: '8',
-        username: 'nature_demo',
-        avatar: 'https://picsum.photos/seed/nature/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 4000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/nature1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 6000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/nature2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '9',
-        username: 'art_demo',
-        avatar: 'https://picsum.photos/seed/art/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 3500
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/art1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 3500
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/art2/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 5000
-          }
-        ]
-      },
-      {
-        id: '10',
-        username: 'sports_demo',
-        avatar: 'https://picsum.photos/seed/sports/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: true,
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 4500
-          }
-        ]
-      },
-      {
-        id: '11',
-        username: 'music_demo',
-        avatar: 'https://picsum.photos/seed/music/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 3000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/music1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 4000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/music2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '12',
-        username: 'fashion_demo',
-        avatar: 'https://picsum.photos/seed/fashion/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 3000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/fashion1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 3000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/fashion2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '13',
-        username: 'pets_demo',
-        avatar: 'https://picsum.photos/seed/pets/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 5000
-          }
-        ]
-      },
-      {
-        id: '14',
-        username: 'fitness_demo',
-        avatar: 'https://picsum.photos/seed/fitness/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: true,
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 4000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/fitness1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 6000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/fitness2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '15',
-        username: 'gaming_demo',
-        avatar: 'https://picsum.photos/seed/gaming/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 4500
-          }
-        ]
-      },
-      {
-        id: '16',
-        username: 'photography_demo',
-        avatar: 'https://picsum.photos/seed/photography/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: false,
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/photo1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 4000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/photo2/400/600.jpg',
-            duration: 3000
-          }
-        ]
-      },
-      {
-        id: '17',
-        username: 'cooking_demo',
-        avatar: 'https://picsum.photos/seed/cooking/100/100.jpg',
-        isOwn: false,
-        hasStory: true,
-        viewed: true,
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        content: [
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            duration: 5000
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/seed/cooking1/400/600.jpg',
-            duration: 3000
-          },
-          {
-            type: 'video',
-            url: 'https://www.w3schools.com/html/movie.mp4',
-            duration: 4000
-          }
-        ]
       }
-    ]
-    setStories(mockStories)
-  }, [])
 
-  // Auto-play functionality
+      setStories([ownStory, ...(Array.isArray(dbStories) && dbStories.length > 0 ? dbStories : demoStories)])
+    } catch (e) {
+      console.error('Failed to load stories:', e)
+    }
+  }
+
+  useEffect(() => {
+    fetchBackendStories()
+  }, [user])
+
+  // Handle uploading story file from device
+  const handleStoryFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setUploading(true)
+    toast.loading('Uploading to your story...')
+
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const base64Data = reader.result
+      const isVideo = file.type.startsWith('video')
+
+      try {
+        const token = Cookie.get('token') || localStorage.getItem('token')
+        const response = await fetch(`${API_URL}/stories`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            mediaType: isVideo ? 'video' : 'image',
+            url: base64Data,
+            duration: isVideo ? 6000 : 4000
+          })
+        })
+
+        if (response.ok) {
+          toast.dismiss()
+          toast.success('Story posted successfully!')
+          fetchBackendStories()
+        } else {
+          toast.dismiss()
+          // Display locally if auth token not set
+          const newStoryItem = {
+            id: `story-${Date.now()}`,
+            username: user?.username || 'You',
+            avatar: user?.avatar || '',
+            hasStory: true,
+            viewed: false,
+            content: [{ type: isVideo ? 'video' : 'image', url: base64Data, duration: 5000 }]
+          }
+          setStories(prev => [prev[0], newStoryItem, ...prev.slice(1)])
+          toast.success('Story posted!')
+        }
+      } catch (err) {
+        toast.dismiss()
+        toast.error('Failed to post story')
+      } finally {
+        setUploading(false)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Progress timer for story playback
   useEffect(() => {
     if (activeStory && isPlaying) {
       const currentContent = activeStory.content[currentStoryIndex]
       if (currentContent) {
         setProgress(0)
-        
-        // Clear existing interval
-        if (progressInterval.current) {
-          clearInterval(progressInterval.current)
-        }
-        
-        // Start progress animation
+        if (progressInterval.current) clearInterval(progressInterval.current)
+
+        const stepTime = 50
+        const totalSteps = (currentContent.duration || 4000) / stepTime
+        let currentStep = 0
+
         progressInterval.current = setInterval(() => {
-          setProgress(prev => {
-            const increment = 100 / (currentContent.duration / 100)
-            const newProgress = prev + increment
-            
-            if (newProgress >= 100) {
-              clearInterval(progressInterval.current)
-              // Move to next content or story
-              if (currentStoryIndex < activeStory.content.length - 1) {
-                setCurrentStoryIndex(prev => prev + 1)
+          currentStep++
+          const newProgress = (currentStep / totalSteps) * 100
+          setProgress(newProgress)
+
+          if (newProgress >= 100) {
+            clearInterval(progressInterval.current)
+            if (currentStoryIndex < activeStory.content.length - 1) {
+              setCurrentStoryIndex(prev => prev + 1)
+            } else {
+              const currentStoryIdx = stories.findIndex(s => s.id === activeStory.id)
+              if (currentStoryIdx < stories.length - 1) {
+                const nextStory = stories[currentStoryIdx + 1]
+                setActiveStory(nextStory)
+                setCurrentStoryIndex(0)
+                setStories(prev => prev.map(s => s.id === activeStory.id ? { ...s, viewed: true } : s))
               } else {
-                // Move to next story
-                const currentStoryIdx = stories.findIndex(s => s.id === activeStory.id)
-                if (currentStoryIdx < stories.length - 1) {
-                  const nextStory = stories[currentStoryIdx + 1]
-                  setActiveStory(nextStory)
-                  setCurrentStoryIndex(0)
-                  // Mark current story as viewed
-                  setStories(prev => prev.map(s => 
-                    s.id === activeStory.id ? { ...s, viewed: true } : s
-                  ))
-                } else {
-                  // End of stories
-                  setActiveStory(null)
-                }
+                setActiveStory(null)
               }
-              return 0
             }
-            
-            return newProgress
-          })
-        }, 100)
+          }
+        }, stepTime)
       }
     }
-    
     return () => {
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current)
-      }
+      if (progressInterval.current) clearInterval(progressInterval.current)
     }
   }, [activeStory, currentStoryIndex, isPlaying, stories])
 
-  // Cleanup video when switching stories
-  useEffect(() => {
-    if (videoRef.current && activeStory) {
-      const currentContent = activeStory.content[currentStoryIndex]
-      if (currentContent?.type === 'video') {
-        // Pause video when switching stories
-        videoRef.current.pause()
-        videoRef.current.currentTime = 0
-      }
-    }
-  }, [currentStoryIndex, activeStory])
-
-  // Handle video play/pause
-  useEffect(() => {
-    if (videoRef.current && activeStory) {
-      const currentContent = activeStory.content[currentStoryIndex]
-      if (currentContent?.type === 'video') {
-        if (isPlaying) {
-          videoRef.current.play().catch(err => {
-            // Don't log AbortError as it's expected during navigation
-            if (err.name !== 'AbortError') {
-              console.log('Video play error:', err.message)
-            }
-          })
-        } else {
-          videoRef.current.pause()
-        }
-      }
-    }
-  }, [isPlaying, currentStoryIndex, activeStory])
-
   const handleStoryClick = (story) => {
-    if (story.isOwn && !story.hasStory) {
-      console.log('Create new story')
-    } else if (story.hasStory) {
+    if (story.isOwn) {
+      fileInputRef.current?.click()
+    } else if (story.hasStory && story.content?.length > 0) {
       setActiveStory(story)
       setCurrentStoryIndex(0)
       setIsPlaying(true)
       setProgress(0)
-      // Mark as viewed
-      setStories(prev => prev.map(s => 
-        s.id === story.id ? { ...s, viewed: true } : s
-      ))
-    }
-  }
-
-  const togglePlayPause = () => {
-    setIsPlaying(!isPlaying)
-  }
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted
-      setIsMuted(!isMuted)
-    }
-  }
-
-  const goToNextStory = () => {
-    const currentStoryIdx = stories.findIndex(s => s.id === activeStory.id)
-    if (currentStoryIdx < stories.length - 1) {
-      const nextStory = stories[currentStoryIdx + 1]
-      setActiveStory(nextStory)
-      setCurrentStoryIndex(0)
-      setProgress(0)
-    }
-  }
-
-  const goToPreviousStory = () => {
-    const currentStoryIdx = stories.findIndex(s => s.id === activeStory.id)
-    if (currentStoryIdx > 0) {
-      const prevStory = stories[currentStoryIdx - 1]
-      setActiveStory(prevStory)
-      setCurrentStoryIndex(0)
-      setProgress(0)
+      setStories(prev => prev.map(s => s.id === story.id ? { ...s, viewed: true } : s))
     }
   }
 
@@ -563,7 +192,13 @@ const StoriesBar = () => {
     if (currentStoryIndex < activeStory.content.length - 1) {
       setCurrentStoryIndex(prev => prev + 1)
     } else {
-      goToNextStory()
+      const currentStoryIdx = stories.findIndex(s => s.id === activeStory.id)
+      if (currentStoryIdx < stories.length - 1) {
+        setActiveStory(stories[currentStoryIdx + 1])
+        setCurrentStoryIndex(0)
+      } else {
+        setActiveStory(null)
+      }
     }
   }
 
@@ -575,240 +210,150 @@ const StoriesBar = () => {
 
   return (
     <>
-      {/* Stories Container */}
-      <div className="bg-gray-950 border-b border-gray-800 p-4">
-        <div className="flex space-x-4 overflow-x-auto scrollbar-hide">
-          {stories.map((story, index) => (
-            <motion.div
+      {/* Hidden file input for uploading story */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        onChange={handleStoryFileUpload}
+        className="hidden"
+      />
+
+      {/* SocialHub Stories Bar */}
+      <div className="bg-black py-3 px-2 border-b border-[#262626]">
+        <div className="flex space-x-4 overflow-x-auto custom-scrollbar">
+          {stories.map((story) => (
+            <div
               key={story.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex flex-col items-center space-y-1 cursor-pointer flex-shrink-0"
               onClick={() => handleStoryClick(story)}
+              className="flex flex-col items-center space-y-1.5 cursor-pointer flex-shrink-0 group"
             >
-              {/* Story Circle */}
+              {/* Instagram Ring */}
               <div className="relative">
                 {story.isOwn ? (
-                  <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center border-2 border-gray-700">
-                    <Plus className="w-6 h-6 text-white" />
+                  <div className="w-[66px] h-[66px] rounded-full p-[2px] border border-[#262626] relative flex items-center justify-center">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt="You" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-[#121212] flex items-center justify-center text-white font-bold text-sm">
+                        {user?.username?.charAt(0).toUpperCase() || 'Y'}
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 right-0 bg-[#0095F6] border-2 border-black rounded-full p-0.5 text-white">
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
                   </div>
                 ) : (
-                  <div className={`w-16 h-16 rounded-full p-0.5 ${
-                    story.viewed === true 
-                      ? 'bg-gray-700' 
-                      : 'bg-gradient-to-tr from-purple-500 via-pink-500 to-red-500'
-                  }`}>
-                    <div className="w-full h-full rounded-full bg-gray-900 p-0.5">
-                      <div className="w-full h-full rounded-full bg-gray-800 flex items-center justify-center">
-                        {story.avatar ? (
-                          <img 
-                            src={story.avatar} 
-                            alt={story.username}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                            <span className="text-white text-lg font-semibold">
-                              {story.username[0].toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                  <div className={`w-[66px] h-[66px] rounded-full ${story.viewed ? 'ig-story-ring-viewed' : 'ig-story-ring'} flex items-center justify-center transition-transform group-hover:scale-105`}>
+                    <div className="w-full h-full rounded-full bg-black p-[2px]">
+                      {story.avatar ? (
+                        <img src={story.avatar} alt={story.username} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-[#121212] flex items-center justify-center text-white font-bold text-sm">
+                          {story.username?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
-                
-                {/* Live indicator for recent stories */}
-                {story.viewed === false && story.hasStory && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                )}
               </div>
-              
+
               {/* Username */}
-              <span className="text-xs text-white truncate w-16 text-center">
-                {story.isOwn ? 'Your story' : story.username}
+              <span className="text-[11px] text-[#F5F5F5] truncate w-16 text-center tracking-tight">
+                {story.username}
               </span>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Story Viewer Modal */}
+      {/* Story Fullscreen Viewer Modal */}
       <AnimatePresence>
-        {activeStory && (
+        {activeStory && activeStory.content?.length > 0 && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-50 flex items-center justify-center"
-            onClick={() => setActiveStory(null)}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 bg-[#1a1a1a] z-50 flex items-center justify-center"
           >
-            <div className="relative max-w-md w-full h-full">
-              {/* Story Progress Bar */}
-              <div className="absolute top-4 left-4 right-4 z-10">
-                <div className="flex space-x-1">
-                  {activeStory.content.map((_, index) => (
-                    <div key={index} className="flex-1 bg-white/30 h-1 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: index === currentStoryIndex ? 0 : '100%' }}
-                        animate={{ 
-                          width: index === currentStoryIndex ? `${progress}%` : '100%'
-                        }}
-                        transition={{ 
-                          duration: index === currentStoryIndex ? 100 : 0,
-                          ease: 'linear'
-                        }}
-                        className="h-full bg-white"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Story Card Container */}
+            <div className="relative w-full max-w-[400px] h-full max-h-[850px] bg-black sm:rounded-xl overflow-hidden shadow-2xl flex flex-col justify-between">
 
-              {/* Story Content */}
-              <div className="flex items-center justify-center h-full">
-                <div className="relative w-full h-full">
-                  {activeStory.content[currentStoryIndex]?.type === 'video' ? (
-                    <video
-                      key={activeStory.content[currentStoryIndex].url}
-                      ref={videoRef}
-                      src={activeStory.content[currentStoryIndex].url}
-                      className="w-full h-full object-cover"
-                      autoPlay={isPlaying}
-                      muted={isMuted}
-                      loop={false}
-                      playsInline
-                      onClick={togglePlayPause}
+              {/* Top Progress Segmented Bar */}
+              <div className="absolute top-3 left-3 right-3 z-30 flex space-x-1.5">
+                {activeStory.content.map((_, idx) => (
+                  <div key={idx} className="flex-1 bg-white/30 h-[2.5px] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white transition-all duration-75"
+                      style={{
+                        width: idx === currentStoryIndex ? `${progress}%` : idx < currentStoryIndex ? '100%' : '0%'
+                      }}
                     />
-                  ) : (
-                    <img
-                      key={activeStory.content[currentStoryIndex].url}
-                      src={activeStory.content[currentStoryIndex].url}
-                      alt="Story content"
-                      className="w-full h-full object-cover"
-                      onClick={togglePlayPause}
-                    />
-                  )}
-
-                  {/* Play/Pause overlay */}
-                  {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <Play className="w-16 h-16 text-white/50" />
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
 
               {/* Story Header */}
-              <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+              <div className="absolute top-7 left-3 right-3 z-30 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <img src={activeStory.avatar || 'https://picsum.photos/seed/user/100/100'} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-white/20" />
+                  <span className="text-xs font-semibold text-white">{activeStory.username}</span>
+                  <span className="text-[10px] text-gray-300">Active</span>
+                </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">
-                      {activeStory.username[0].toUpperCase()}
-                    </span>
-                  </div>
-                  <span className="text-white font-semibold">{activeStory.username}</span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setActiveStory(null)
-                  }}
-                  className="text-white/80 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Navigation Controls */}
-              <div className="absolute top-1/2 left-4 transform -translate-y-1/2 z-10">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    goToPreviousStory()
-                  }}
-                  className="text-white/80 hover:text-white"
-                >
-                  <ChevronLeft className="w-8 h-8" />
-                </button>
-              </div>
-              <div className="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    goToNextStory()
-                  }}
-                  className="text-white/80 hover:text-white"
-                >
-                  <ChevronRight className="w-8 h-8" />
-                </button>
-              </div>
-
-              {/* Media Controls */}
-              <div className="absolute bottom-4 right-4 z-10 flex space-x-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    togglePlayPause()
-                  }}
-                  className="text-white/80 hover:text-white"
-                >
-                  {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    toggleMute()
-                  }}
-                  className="text-white/80 hover:text-white"
-                >
-                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-                </button>
-              </div>
-
-              {/* Content Navigation */}
-              <div className="absolute bottom-4 left-4 right-20 z-10">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      goToPreviousContent()
-                    }}
-                    disabled={currentStoryIndex === 0}
-                    className="text-white/60 hover:text-white disabled:opacity-30"
-                  >
-                    ←
+                  <button onClick={() => setIsPlaying(!isPlaying)} className="text-white">
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      goToNextContent()
-                    }}
-                    disabled={currentStoryIndex === activeStory.content.length - 1}
-                    className="text-white/60 hover:text-white disabled:opacity-30"
-                  >
-                    →
+                  <button onClick={() => setActiveStory(null)} className="text-white">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
+              </div>
+
+              {/* Story Content & Tap Controls */}
+              <div className="relative w-full h-full flex items-center justify-center bg-black">
+                {activeStory.content[currentStoryIndex]?.type === 'video' ? (
+                  <video
+                    ref={videoRef}
+                    src={activeStory.content[currentStoryIndex].url}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted={isMuted}
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={activeStory.content[currentStoryIndex]?.url}
+                    alt="story"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+
+                {/* Left/Right Tap Areas */}
+                <div className="absolute inset-y-0 left-0 w-1/3 z-20" onClick={goToPreviousContent} />
+                <div className="absolute inset-y-0 right-0 w-2/3 z-20" onClick={goToNextContent} />
+              </div>
+
+              {/* Story Bottom Reply Bar */}
+              <div className="absolute bottom-4 left-3 right-3 z-30 flex items-center space-x-3">
+                <input
+                  type="text"
+                  placeholder={`Reply to ${activeStory.username}...`}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  className="flex-1 bg-transparent border border-white/40 rounded-full px-4 py-2 text-xs text-white placeholder-gray-300 focus:outline-none focus:border-white"
+                />
+                <button className="text-white hover:scale-110 transition">
+                  <Heart className="w-6 h-6" />
+                </button>
+                <button className="text-white hover:scale-110 transition">
+                  <Send className="w-6 h-6" />
+                </button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Hide scrollbar styles */}
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </>
   )
 }

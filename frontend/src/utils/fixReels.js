@@ -1,7 +1,9 @@
+import { API_URL } from '../config/api'
+
 // Fix reel posts to have proper video URLs and mediaType
 const fixReels = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/posts');
+    const response = await fetch(`${API_URL}/posts`);
     const posts = await response.json();
     
     // Update posts to be reels with video content
@@ -30,7 +32,7 @@ const fixReels = async () => {
     
     // Update each post
     for (const update of updates) {
-      const updateResponse = await fetch(`http://localhost:5000/api/posts/${update._id}`, {
+      const updateResponse = await fetch(`${API_URL}/posts/${update._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
