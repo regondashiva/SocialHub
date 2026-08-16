@@ -12,7 +12,7 @@ const workingVideos = [
 ]
 
 function ReelsSection({ onBackToHome }) {
-  const { posts, fetchPosts } = usePostStore()
+  const { posts, fetchPosts, likePost, unlikePost } = usePostStore()
   const [reels, setReels] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
@@ -93,8 +93,6 @@ function ReelsSection({ onBackToHome }) {
       setIsPlaying(true)
     }
   }
-
-  const { posts, fetchPosts, likePost, unlikePost } = usePostStore()
 
   const handleDoubleTap = () => {
     if (currentReel) {
