@@ -306,7 +306,6 @@ router.post('/:postId/comments', authMiddleware, async (req, res) => {
     if (!post) return res.status(404).json({ message: 'Post not found' })
 
     const commentId = new mongoose.Types.ObjectId()
-    const user = await User.findById(req.userId)
 
     const newComment = {
       _id: commentId,
